@@ -16,7 +16,9 @@ light that will be there — then tells you tonight is the wrong night and Thurs
 is not. It does not store recipes.
 
 `docs/camera-control.md` is the design, including the parts that are still
-unknown until the camera is on the desk.
+unknown until the camera is on the desk. `docs/intents.md` is the catalogue of
+things a photographer might ask for, and the six solvers underneath them that
+keep it from becoming a recipe book.
 
 ---
 
