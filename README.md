@@ -15,10 +15,14 @@ settings from the lens actually mounted, the sky at that place and hour, and the
 light that will be there — then tells you tonight is the wrong night and Thursday
 is not. It does not store recipes.
 
+An iOS and Android app, for phones and tablets with a USB-C port, talking to the
+camera over that cable or over Wi-Fi.
+
 `docs/camera-control.md` is the design, including the parts that are still
 unknown until the camera is on the desk. `docs/intents.md` is the catalogue of
 things a photographer might ask for, and the six solvers underneath them that
-keep it from becoming a recipe book.
+keep it from becoming a recipe book. `docs/transport.md` is how it reaches the
+camera, and why two mobile platforms leave exactly one way to do that.
 
 ---
 

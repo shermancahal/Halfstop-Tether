@@ -258,18 +258,7 @@ What is genuinely open needs the camera on the desk, or a decision:
 2. **Does a hand on a dial produce an event, or must it be polled for?** If
    nothing is volunteered, the tiered poll is not an optimisation but the only
    thing keeping the app honest. The probe listens for fifteen seconds and says.
-3. **What the transport layer is built on.** Four options, and the choice is
-   entangled with what platform this app runs on:
-
-   - **libgphoto2** — LGPL, cross-platform, enormous device coverage, and this
-     camera is in its supported list. Free, and the camera quirks become ours.
-   - **CascableCore** — a commercial SDK covering 200-odd bodies over USB and
-     Wi-Fi, with viewfinder streaming, already proven against this exact camera.
-     Apple platforms only, which decides the product's shape as much as its
-     plumbing.
-   - **Nikon's own SDK** — registration-gated, narrower coverage.
-   - **Raw PTP** — most control, most work, and a long tail of vendor quirks
-     that the options above have already paid for.
-
-   This is the one that cannot be settled by probing, because it is a question
-   about what is being built rather than what the camera can do.
+3. **The transport is decided** — raw PTP, spoken directly, because scoping the
+   app to iOS and Android removes every other option. `docs/transport.md` has
+   the reasoning, the per-platform shims, and the three things to verify on
+   device before anything is built on them.
