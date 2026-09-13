@@ -5,3 +5,5 @@ dist/
 probe-output/
 ios/
 android/
+design/*.html
+!design/*.dc.html

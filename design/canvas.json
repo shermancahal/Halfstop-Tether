@@ -1,0 +1,16 @@
+{
+  "artboards": [
+    { "file": "Connect.dc.html",  "x": 0,    "y": 0,    "w": 390, "h": 844, "title": "1 · Connect" },
+    { "file": "Ask.dc.html",      "x": 470,  "y": 0,    "w": 390, "h": 844, "title": "2 · Ask" },
+    { "file": "Tonight.dc.html",  "x": 940,  "y": 0,    "w": 390, "h": 844, "title": "3 · Tonight" },
+    { "file": "Plan.dc.html",     "x": 1410, "y": 0,    "w": 390, "h": 844, "title": "4 · The plan" },
+    { "file": "Main.dc.html",     "x": 0,    "y": 1000, "w": 390, "h": 844, "title": "5 · Live control" },
+    { "file": "Sequence.dc.html", "x": 470,  "y": 1000, "w": 390, "h": 844, "title": "6 · Running" },
+    { "file": "Night.dc.html",    "x": 940,  "y": 1000, "w": 390, "h": 844, "title": "5b · Night vision" }
+  ],
+  "annotations": [
+    { "id": "flow-note", "x": 0, "y": -150, "w": 560, "text": "The flow, left to right: connect, say what you want, find out whether tonight is even the night, get a plan whose every number shows its reasoning.\n\nBelow: the camera itself, a run in progress, and the same control screen in red for 2am." },
+    { "id": "states-note", "x": 1410, "y": 1000, "w": 330, "text": "Three control states, visible in artboard 5:\n\nSolid border — the app can set it.\nDashed grey — a dial owns it, and it says which.\nDashed amber — writable in principle, inert right now, with the reason.\n\nThe blue strip above them is the camera reporting a change someone made by hand." }
+  ],
+  "launch": { "view": "canvas" }
+}
