@@ -23,6 +23,8 @@ unknown until the camera is on the desk. `docs/intents.md` is the catalogue of
 things a photographer might ask for, and the six solvers underneath them that
 keep it from becoming a recipe book. `docs/transport.md` is how it reaches the
 camera, and why two mobile platforms leave exactly one way to do that.
+`docs/focus.md` is about focusing on a star, which is the app's best single
+argument for existing.
 
 ---
 

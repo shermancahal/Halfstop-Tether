@@ -278,6 +278,17 @@ async function main() {
 
   await writeFile(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
 
+  /* Focus control rides on live view, so report the two together. */
+  const focusPaths = Object.keys(baseline).filter((p) => /manualfocusdrive|focusmode|viewfinder|zoomratio|starlight/i.test(p));
+  report.phases.focus = {
+    manualFocusDrive: focusPaths.some((p) => /manualfocusdrive/i.test(p)),
+    liveViewZoom: focusPaths.some((p) => /zoomratio/i.test(p)),
+    starlightView: focusPaths.some((p) => /starlight/i.test(p)),
+    paths: focusPaths,
+  };
+  say(`\nFocus control: manual drive ${report.phases.focus.manualFocusDrive ? 'yes' : 'no'}` +
+      `, live view zoom ${report.phases.focus.liveViewZoom ? 'yes' : 'no'}`);
+
   const lv = report.phases.liveview;
   const sweep = report.phases.modeSweep;
   const summaryMd = `# Probe report
@@ -291,6 +302,7 @@ async function main() {
 - Dial changes legal values of: **${sweep ? sweep.choices.length : 'not measured'}** settings
 - Events on a hand-turned dial: **${report.phases.events.matched.length}** lines
 - Write round trip: **${report.phases.write.setMs ?? 'n/a'} ms**${report.phases.write.confirmed ? ' (confirmed)' : ''}
+- Manual focus drive: **${report.phases.focus.manualFocusDrive ? 'yes' : 'no'}** · live view zoom: **${report.phases.focus.liveViewZoom ? 'yes' : 'no'}** · starlight view: **${report.phases.focus.starlightView ? 'yes' : 'no'}**
 
 Raw dumps are beside this file. \`report.json\` has everything.
 `;
