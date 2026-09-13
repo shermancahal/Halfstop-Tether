@@ -1,0 +1,8 @@
+{
+  "appId": "com.halfstop.tether",
+  "appName": "Halfstop Tether",
+  "webDir": "www",
+  "server": { "androidScheme": "https" },
+  "ios": { "contentInset": "never" },
+  "android": { "allowMixedContent": false }
+}
