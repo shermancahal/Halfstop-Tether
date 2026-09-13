@@ -44,9 +44,26 @@ in the configuration; the arithmetic lives in one place and is tested once.
 
 ## The conversation
 
-**One open question.** *What are you shooting?* Free text, because the answer
-"the waterfall at the bottom of the trail before the light goes" carries subject,
-timing and constraint in one sentence, and a menu of thirteen buttons does not.
+**Seven buttons, then words.** Speed wins at the moment of use: it is cold, it
+is dark, and the light is going. So the common cases are one tap each —
+waterfalls, long exposure, Milky Way, astro, sunrise and sunset, timelapse,
+intervalometer — with a free-text row underneath for everything they do not
+cover. The text field is not the fallback for a failure of the list; it is how
+the other six intents in this catalogue, and the ones nobody has thought of yet,
+stay reachable without a menu thirteen items long.
+
+**The buttons name intents, not settings.** Tapping Waterfalls does not apply a
+recipe. It says which solver to run, and every number still comes out of the
+lens that is mounted and the light that is there.
+
+**Three of the seven overlap, and the labels do the work.** Waterfalls are long
+exposures; the Milky Way is astro; an intervalometer is what drives a timelapse.
+A flat list leaves someone guessing which button owns their shot, so each row
+carries the line that draws the border — *anything else that wants a slow
+shutter*, *star trails, aurora, anything else up there*, *frames on a timer, kept
+as frames* — and each overlapping pair sits adjacent, so both are in view before
+the choice is made. Resolving it with a second level of menu would cost the tap
+the list exists to save.
 
 **Then only what cannot be sensed.** The app already knows the body, the lens,
 the focal length, the maximum aperture at that focal length, every current
