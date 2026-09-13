@@ -69,6 +69,19 @@ symmetrical to you" into "three steps nearer".
 
 ---
 
+## It belongs to every mode
+
+Focusing on a star is filed under astro by habit, not by logic. The same routine
+finds focus on a distant ridge at dusk, on a lit window across a valley, on
+anything far enough away that the ring's own marks have given up — and the drift
+that spoils a Milky Way stack spoils a four-hour timelapse identically.
+
+So it is a tool reachable from anywhere, including from Custom, rather than a
+step inside one plan. The intent decides what gets shot; it does not decide what
+instruments are available while shooting it.
+
+---
+
 ## Then hold it
 
 Getting focus is half the problem. **Re-check it during the run.** Every N

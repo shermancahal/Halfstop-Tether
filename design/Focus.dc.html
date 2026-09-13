@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; }
+    a { color: #e2734a; } a:hover { color: #f08a63; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #15120f; color: #f2ece3; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; display: flex; flex-direction: column; padding: 60px 20px 34px;">
+
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+    <span style="width: 7px; height: 7px; border-radius: 50%; background: #6fae87; flex: none;"></span>
+    <span style="font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8a8078; flex-grow: 1;">Fine focus · live view ×8</span>
+  </div>
+
+  <svg width="350" height="168" viewBox="0 0 350 168" style="border-radius: 9px; margin-bottom: 12px;">
+    <rect width="350" height="168" fill="#0b0d14"/>
+    <g fill="#e8eaf2" opacity=".35">
+      <circle cx="54" cy="36" r="1"/><circle cx="286" cy="128" r="1.1"/><circle cx="312" cy="44" r="0.9"/>
+      <circle cx="66" cy="132" r="1"/><circle cx="238" cy="26" r="0.9"/>
+    </g>
+    <circle cx="175" cy="84" r="16" fill="#f2ece3" opacity=".08"/>
+    <circle cx="175" cy="84" r="8.5" fill="#f2ece3" opacity=".22"/>
+    <circle cx="175" cy="84" r="3.4" fill="#ffffff"/>
+    <g stroke="#6fae87" stroke-width="1.2" fill="none">
+      <path d="M143 62v-10h10"/><path d="M207 62v-10h-10"/>
+      <path d="M143 106v10h10"/><path d="M207 106v10h-10"/>
+    </g>
+    <circle cx="175" cy="84" r="24" fill="none" stroke="#6fae87" stroke-width="0.8" stroke-dasharray="2 4" opacity=".6"/>
+  </svg>
+
+  <div style="display: flex; align-items: flex-end; gap: 14px; margin-bottom: 16px;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div style="font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8a8078;">Half-flux diameter</div>
+      <div style="font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif; font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; color: #6fae87;">2.8<span style="font-size: 17px; color: #8a8078;"> px</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 3px; flex-grow: 1; padding-bottom: 3px;">
+      <div style="display: flex; align-items: center; gap: 5px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6fae87" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16 12 9l7 7"/></svg>
+        <span style="font-size: 12px; color: #6fae87;">sharpest yet</span>
+      </div>
+      <div style="font-size: 11.5px; line-height: 1.35; color: #8a8078;">Was 9.4 px at the infinity mark</div>
+    </div>
+  </div>
+
+  <svg width="350" height="118" viewBox="0 0 350 118" style="margin-bottom: 14px;">
+    <line x1="26" y1="92" x2="346" y2="92" stroke="#362f2a" stroke-width="1"/>
+    <line x1="26" y1="6" x2="26" y2="92" stroke="#362f2a" stroke-width="1"/>
+    <path d="M44 18 L102 44 L160 68 L189 79 L218 68 L276 44 L330 20" fill="none" stroke="#4a423b" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <g fill="#8a8078">
+      <circle cx="44" cy="20" r="3"/><circle cx="73" cy="31" r="3"/><circle cx="102" cy="43" r="3"/>
+      <circle cx="131" cy="56" r="3"/><circle cx="160" cy="67" r="3"/>
+      <circle cx="218" cy="69" r="3"/><circle cx="247" cy="57" r="3"/><circle cx="276" cy="45" r="3"/>
+      <circle cx="305" cy="32" r="3"/><circle cx="330" cy="21" r="3"/>
+    </g>
+    <line x1="189" y1="6" x2="189" y2="92" stroke="#6fae87" stroke-width="1" stroke-dasharray="3 3"/>
+    <circle cx="189" cy="79" r="5" fill="#6fae87"/>
+    <g font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" fill="#8a8078">
+      <text x="0" y="24">9px</text>
+      <text x="0" y="95">2px</text>
+      <text x="30" y="110">near</text>
+      <text x="163" y="110">−12</text>
+      <text x="316" y="110">far</text>
+    </g>
+  </svg>
+
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px;">
+    <div style="display: flex; align-items: center; justify-content: center; height: 50px; background: #1d1917; border: 1px solid #6b6055; border-radius: 9px; font-size: 14px; font-weight: 600;">−10</div>
+    <div style="display: flex; align-items: center; justify-content: center; height: 50px; background: #1d1917; border: 1px solid #6b6055; border-radius: 9px; font-size: 14px; font-weight: 600;">−1</div>
+    <div style="display: flex; align-items: center; justify-content: center; height: 50px; background: #1d1917; border: 1px solid #6b6055; border-radius: 9px; font-size: 14px; font-weight: 600;">+1</div>
+    <div style="display: flex; align-items: center; justify-content: center; height: 50px; background: #1d1917; border: 1px solid #6b6055; border-radius: 9px; font-size: 14px; font-weight: 600;">+10</div>
+  </div>
+  <div style="font-size: 11.5px; line-height: 1.4; color: #8a8078; margin-bottom: 16px; text-wrap: pretty;">Steps are the lens's own, not millimetres. Focus-by-wire has no absolute position to return to.</div>
+
+  <div style="flex-grow: 1;"></div>
+
+  <div style="display: flex; gap: 11px; padding: 13px 14px; background: #1a2228; border: 1px solid #2e4351; border-radius: 9px; margin-bottom: 10px;">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6aaed6" stroke-width="1.6" stroke-linecap="round" style="flex: none; margin-top: 1px;"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3.5 2"/></svg>
+    <div style="font-size: 12px; line-height: 1.45; color: #9bb4c4;">I'll re-check every 40 frames. The lens cools, the focus walks, and it doesn't show on a phone until morning.</div>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: center; height: 52px; background: #e2734a; color: #1c1815; border-radius: 9px; font-size: 15px; font-weight: 650;">Sweep again</div>
+</div>
+</x-dc>
+</body>
+</html>

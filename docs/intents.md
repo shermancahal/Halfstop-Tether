@@ -56,6 +56,14 @@ stay reachable without a menu thirteen items long.
 recipe. It says which solver to run, and every number still comes out of the
 lens that is mounted and the light that is there.
 
+**Custom is the absence of an intent, not another one.** Someone who wants to
+set every value themselves is not asking to be solved for, so Custom sits with
+the free-text row rather than in the list of subjects — and the screen it opens
+derives nothing and therefore explains nothing, because there is no reasoning to
+show. What it does keep is the mirroring: a setting a dial owns is still marked
+as the dial's, in manual exactly as in a plan. That rule is about the camera,
+not about the mode.
+
 **Three of the seven overlap, and the labels do the work.** Waterfalls are long
 exposures; the Milky Way is astro; an intervalometer is what drives a timelapse.
 A flat list leaves someone guessing which button owns their shot, so each row

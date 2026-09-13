@@ -14,7 +14,7 @@
       "y": 0,
       "w": 390,
       "h": 844,
-      "title": "2 \u00b7 Ask"
+      "title": "2 \u00b7 Pick an intent"
     },
     {
       "file": "Tonight.dc.html",
@@ -41,20 +41,36 @@
       "title": "5 \u00b7 Live control"
     },
     {
-      "file": "Sequence.dc.html",
+      "file": "Focus.dc.html",
       "x": 490,
       "y": 1000,
       "w": 390,
       "h": 844,
-      "title": "6 \u00b7 Running"
+      "title": "6 \u00b7 Fine focus"
     },
     {
-      "file": "Night.dc.html",
+      "file": "Sequence.dc.html",
       "x": 980,
       "y": 1000,
       "w": 390,
       "h": 844,
+      "title": "7 \u00b7 Running"
+    },
+    {
+      "file": "Night.dc.html",
+      "x": 1470,
+      "y": 1000,
+      "w": 390,
+      "h": 844,
       "title": "5b \u00b7 Night vision"
+    },
+    {
+      "file": "Custom.dc.html",
+      "x": 0,
+      "y": 2000,
+      "w": 390,
+      "h": 844,
+      "title": "8 \u00b7 Custom"
     }
   ],
   "annotations": [
@@ -63,7 +79,7 @@
       "x": 0,
       "y": -150,
       "w": 560,
-      "text": "The flow, left to right: connect, say what you want, find out whether tonight is even the night, get a plan whose every number shows its reasoning.\n\nBelow: the camera itself, a run in progress, and the same control screen in red for 2am."
+      "text": "The flow, left to right: connect, pick what you are shooting, find out whether tonight is even the night, get a plan whose every number shows its reasoning.\n\nBelow: the camera itself, focusing on a star, a run in progress, and the same control screen in red for 2am."
     },
     {
       "id": "states-note",
@@ -71,6 +87,13 @@
       "y": 1000,
       "w": 330,
       "text": "Three control states, visible in artboard 5:\n\nSolid border \u2014 the app can set it.\nDashed grey \u2014 a dial owns it, and it says which.\nDashed amber \u2014 writable in principle, inert right now, with the reason.\n\nThe strip above them is the camera reporting a change someone made by hand."
+    },
+    {
+      "id": "custom-note",
+      "x": 490,
+      "y": 2000,
+      "w": 330,
+      "text": "Custom is the absence of an intent, not another one \u2014 so on screen 2 it sits with the free-text row rather than in the list of subjects. Nothing here is derived, so nothing carries a reason. What a dial owns, it still owns.\n\nFine focus reaches it from here too. It is a tool, not a step in the astro path."
     }
   ],
   "launch": {
