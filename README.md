@@ -24,11 +24,34 @@ keep it from becoming a recipe book.
 
 ## Status
 
-Design only. Nothing runs yet.
+Design, plus a probe. No app yet.
 
-The next step is a probe: connect the Z5 and record what the body actually
-exposes, because the published sources disagree with each other and with Nikon's
-own software about what this camera can do.
+`tools/probe.mjs` asks the camera what it can do, because the published sources
+disagree with each other and with Nikon's own software. Plug the Z5 in and run:
+
+```bash
+npm run probe        # needs gphoto2 on the PATH
+npm test             # the parsing, without a camera
+```
+
+It reads every setting and times how long that takes, tests live view and
+measures its size and frame rate, sweeps the mode dial to find which settings
+change writability and legal values with camera state, listens for whether a
+hand-turned dial produces an event at all, and times a write round trip. It
+changes nothing it does not put back and never touches the card.
+
+## Prior art, and what this is for
+
+[Cascable](https://cascable.se) already controls this camera over Wi-Fi and USB,
+including the viewfinder stream, and it is good. It is worth being clear-eyed
+about that: the control surface is solved, by them and in part by libgphoto2,
+and rebuilding it is not the point.
+
+What nothing does is the layer above it — answering "I want to shoot the Milky
+Way over the lake tonight" with the right night, the right window, and numbers
+derived from the lens actually mounted. That needs a camera connection and an
+astronomy engine in the same program, which is a strange combination to have
+lying around and is exactly what Halfstop leaves within reach.
 
 ## Its relationship to Halfstop
 

@@ -100,11 +100,18 @@ It asks rather than corrects. The hand on the camera outranks the plan.
 The Z5 offers USB-C and built-in Wi-Fi. They are not equivalent, and the app
 should not pretend otherwise.
 
-**Wi-Fi works and is unreliable.** Viewing images over it succeeds often enough
-to be useful and fails often enough to be infuriating — which is the ordinary
-Nikon experience, not a fault of any one body. The radio sleeps aggressively,
-the handoff between Bluetooth and Wi-Fi is undocumented and brittle, and
-reconnection logic in Nikon's own software has been the weak point for years.
+**Wi-Fi carries full control on this body, and is unreliable.** Both halves are
+established rather than assumed. Cascable controls this camera over Wi-Fi
+today — settings, shutter and viewfinder stream — so the link is not limited to
+moving files, and it reaches the camera through SnapBridge's Wi-Fi Mode, the
+path a phone takes, rather than the Connect to PC path a computer takes. That
+is the connection procedure to implement.
+
+The unreliability is just as real: image transfer over it succeeds often enough
+to be useful and fails often enough to be infuriating, which is the ordinary
+Nikon experience and not a fault of any one body. The radio sleeps aggressively,
+the Bluetooth-to-Wi-Fi handoff is undocumented and brittle, and reconnection has
+been the weak point in Nikon's own software for years.
 
 That is a design input, not a complaint, and it has four consequences.
 
@@ -229,18 +236,40 @@ a dial forbids. It asks the photographer to move the dial.
 
 ## Still to settle
 
-These need the camera on the desk, not more reading:
+Two of the four questions this page opened with are now answered, and by the
+strongest kind of evidence: a third-party app doing the thing on this camera.
 
-1. **Does the Z5 serve live view over PTP?** Nikon's own NX Tether lists the Z5
-   without live view while the Z6 and up have it, which reads as a product tier
-   rather than a hardware limit — the body speaks the same `StartLiveView`
-   (0x9201) and `GetLiveViewImg` (0x9203) opcodes. If it does, click-to-focus
-   and a live histogram are in reach and are most of what a tethering app is.
-2. **Does the Z5 accept a Wi-Fi *control* session, or only image transfer?**
-   Image transfer is confirmed working in the field, if unreliably. Whether the
-   same link will carry property writes and a shutter release is the open half.
-   The camera's own network menu is the authority.
-3. **Which properties does this body actually expose,** and which of them are
-   writable in which modes. One probe run answers it.
-4. **libgphoto2 or Nikon's SDK.** LGPL and broad model coverage against a
-   registration-gated SDK with narrower coverage. This shapes everything.
+**Live view exists on this body — settled.** Cascable streams the Z5's
+viewfinder, with live view zoom, over both USB and Wi-Fi. So the omission in
+Nikon's own NX Tether, which offers live view on the Z6 and up but not here, is
+a product tier and not a hardware limit. Click-to-focus, a live histogram and a
+magnified focus check are all in reach. What remains is measurement — the frame
+size and the frame rate — which the probe reports.
+
+**Wi-Fi carries control, not just transfer — settled.** Same evidence, and it
+sets the connection path: SnapBridge Wi-Fi Mode rather than Connect to PC.
+
+What is genuinely open needs the camera on the desk, or a decision:
+
+1. **Which properties does this body actually expose,** which are writable, and
+   which change writability or legal values when the mode dial moves. The whole
+   mirroring design rests on that last one being true, and `tools/probe.mjs`
+   measures it directly by sweeping the dial and diffing the dumps.
+2. **Does a hand on a dial produce an event, or must it be polled for?** If
+   nothing is volunteered, the tiered poll is not an optimisation but the only
+   thing keeping the app honest. The probe listens for fifteen seconds and says.
+3. **What the transport layer is built on.** Four options, and the choice is
+   entangled with what platform this app runs on:
+
+   - **libgphoto2** — LGPL, cross-platform, enormous device coverage, and this
+     camera is in its supported list. Free, and the camera quirks become ours.
+   - **CascableCore** — a commercial SDK covering 200-odd bodies over USB and
+     Wi-Fi, with viewfinder streaming, already proven against this exact camera.
+     Apple platforms only, which decides the product's shape as much as its
+     plumbing.
+   - **Nikon's own SDK** — registration-gated, narrower coverage.
+   - **Raw PTP** — most control, most work, and a long tail of vendor quirks
+     that the options above have already paid for.
+
+   This is the one that cannot be settled by probing, because it is a question
+   about what is being built rather than what the camera can do.

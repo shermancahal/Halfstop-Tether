@@ -1,0 +1,11 @@
+{
+  "name": "halfstop-tether",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tether to a camera and control it by saying what you want to shoot",
+  "scripts": {
+    "probe": "node tools/probe.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
