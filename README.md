@@ -30,7 +30,16 @@ argument for existing.
 
 ## Status
 
-Design, plus a probe. No app yet.
+Design, a probe that has been run, and the solvers. No app yet.
+
+`src/photo/` is the arithmetic every plan comes out of — the exposure equation,
+the NPF limit, hyperfocal and the diffraction ceiling, the neutral density a
+target shutter needs, and whether a sequence will survive its card and its
+battery. Pure functions, no camera, no network, no model, 39 tests.
+
+```bash
+npm test
+```
 
 `tools/probe.mjs` asks the camera what it can do, because the published sources
 disagree with each other and with Nikon's own software. Plug the Z5 in and run:
