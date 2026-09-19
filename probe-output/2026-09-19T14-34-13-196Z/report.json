@@ -1,0 +1,44 @@
+{
+  "probedAt": "2026-09-19T14:34:13.200Z",
+  "phases": {
+    "detect": {
+      "output": "Model                          Port            \n----------------------------------------------------------\nNikon Z5                       usb:001,008     \n",
+      "cameras": [
+        "Nikon Z5                       usb:001,008     "
+      ]
+    },
+    "summary": "For debugging messages, please use the --debug option.\nDebugging messages may help finding a solution to your problem.\nIf you intend to send any error or debug messages to the gphoto\ndeveloper mailing list <gphoto-devel@lists.sourceforge.net>, please run\ngphoto2 as follows:\n\n    env LANG=C gphoto2 --debug --debug-logfile=my-logfile.txt --summary\n\nPlease make sure there is sufficient quoting around the arguments.\n\n",
+    "config": {
+      "readMs": 70,
+      "count": 0,
+      "writable": 0,
+      "readonly": 0,
+      "configs": {}
+    },
+    "liveview": {
+      "ok": false,
+      "stderr": "*** Error ***              \nAn error occurred in the io-library ('Could not claim the USB device'): Could not claim interface 0 (No such file or directory). Make sure no other program (MacOS PTPCamera service) or kernel module (such as sdc2xx, stv680, spca50x) is using the device and you have read/write access to the device.\n*** Error (-53: 'Could not claim the USB device') ***"
+    },
+    "modeSweep": {
+      "modes": [
+        "M",
+        "A",
+        "S",
+        "P"
+      ],
+      "writability": [],
+      "choices": []
+    },
+    "events": {
+      "raw": "Waiting for 15 seconds for events from camera. Press Ctrl-C to abort.\nFor debugging messages, please use the --debug option.\nDebugging messages may help finding a solution to your problem.\nIf you intend to send any error or debug messages to the gphoto\ndeveloper mailing list <gphoto-devel@lists.sourceforge.net>, please run\ngphoto2 as follows:\n\n    env LANG=C gphoto2 --debug --debug-logfile=my-logfile.txt --wait-event=15s\n\nPlease make sure there is sufficient quoting around the arguments.\n\n",
+      "matched": [
+        "Waiting for 15 seconds for events from camera. Press Ctrl-C to abort.",
+        "    env LANG=C gphoto2 --debug --debug-logfile=my-logfile.txt --wait-event=15s"
+      ]
+    },
+    "write": {
+      "skipped": "no safe writable setting with alternatives in the current mode"
+    }
+  },
+  "gphoto2": "gphoto2 2.5.32"
+}
