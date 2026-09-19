@@ -27,6 +27,34 @@ const run = (args, timeout = 60000) =>
     );
   });
 
+const CLAIM_ERROR = /could not claim|\(-53/i;
+let hadToClaim = false;
+
+/*
+ * macOS starts PTPCamera (ptpcamerad on newer releases) the moment a camera is
+ * plugged in, and it holds interface 0 until it is killed. Killing it before
+ * the camera is connected finds nothing, which is exactly when people try.
+ */
+async function freeCamera() {
+  for (const name of ['PTPCamera', 'ptpcamerad']) {
+    await new Promise((resolve) => execFile('killall', [name], () => resolve()));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 700));
+}
+
+/* Every camera call goes through here, so a grabbed device is taken back once
+ * rather than reported as a camera that answers nothing. */
+async function cam(args, timeout = 60000) {
+  let r = await run(args, timeout);
+  if (!r.ok && CLAIM_ERROR.test(r.stderr + r.stdout)) {
+    if (!hadToClaim) say('  macOS had the camera; taking it back...');
+    hadToClaim = true;
+    await freeCamera();
+    r = await run(args, timeout);
+  }
+  return r;
+}
+
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 const ask = (q) => rl.question(q);
 const say = (...a) => console.log(...a);
@@ -105,7 +133,7 @@ async function main() {
   say(report.gphoto2);
 
   /* 1 — find the camera. */
-  const detect = await run(['--auto-detect'], 20000);
+  const detect = await cam(['--auto-detect'], 20000);
   const cameras = detect.stdout.split('\n').slice(2).filter((l) => l.trim() && !/^-+$/.test(l));
   report.phases.detect = { output: detect.stdout, cameras };
   if (!cameras.length) {
@@ -122,7 +150,7 @@ async function main() {
   }
   say(`\nFound: ${cameras.join(', ')}`);
 
-  const summary = await run(['--summary'], 30000);
+  const summary = await cam(['--summary'], 30000);
   report.phases.summary = summary.stdout;
   await writeFile(join(OUT, 'summary.txt'), summary.stdout);
 
@@ -134,7 +162,7 @@ async function main() {
    */
   say('\nReading every setting...');
   const t0 = Date.now();
-  const all = await run(['--list-all-config'], 120000);
+  const all = await cam(['--list-all-config'], 120000);
   const readMs = Date.now() - t0;
   const baseline = parseConfig(all.stdout);
   const paths = Object.keys(baseline);
@@ -146,13 +174,25 @@ async function main() {
     readonly: paths.filter((p) => baseline[p].readonly === true).length,
     configs: baseline,
   };
+  if (!paths.length) {
+    say('\nThe camera answered nothing. That is a blocked connection, not a limited camera.');
+    say(`\n  ${all.stderr.trim().split('\n').slice(-2).join('\n  ')}`);
+    say('\nOn macOS this is almost always the system camera service. Stop it reopening:');
+    say('  1. Open Image Capture, select the Z5, and set the bottom-left');
+    say('     "Connecting this camera opens" to "No application".');
+    say('  2. Unplug the camera, plug it back in, and run the probe again.');
+    await writeFile(join(OUT, 'report.json'), JSON.stringify({ ...report, aborted: 'no settings returned' }, null, 2));
+    rl.close();
+    process.exitCode = 1;
+    return;
+  }
   say(`  ${paths.length} settings in ${readMs} ms ` +
       `(${report.phases.config.writable} writable, ${report.phases.config.readonly} read-only)`);
 
   /* 3 — live view. The question Nikon's own software says no to on this body. */
   say('\nLive view...');
   const previewPath = join(OUT, 'liveview.jpg');
-  const preview = await run(['--capture-preview', '--force-overwrite', `--filename=${previewPath}`], 45000);
+  const preview = await cam(['--capture-preview', '--force-overwrite', `--filename=${previewPath}`], 45000);
   let live = { ok: false };
   if (preview.ok) {
     try {
@@ -176,7 +216,7 @@ async function main() {
     const start = Date.now();
     let got = 0;
     for (let i = 0; i < n; i++) {
-      const r = await run(['--capture-preview', '--force-overwrite', `--filename=${join(OUT, 'lv-rate.jpg')}`], 20000);
+      const r = await cam(['--capture-preview', '--force-overwrite', `--filename=${join(OUT, 'lv-rate.jpg')}`], 20000);
       if (r.ok) got++;
     }
     const fps = got / ((Date.now() - start) / 1000);
@@ -196,7 +236,7 @@ async function main() {
   for (const mode of ['M', 'A', 'S', 'P']) {
     const answer = await ask(`  Turn the mode dial to ${mode}, then press Enter (or 's' to skip): `);
     if (answer.trim().toLowerCase() === 's') continue;
-    const dump = await run(['--list-all-config'], 120000);
+    const dump = await cam(['--list-all-config'], 120000);
     sweeps[mode] = parseConfig(dump.stdout);
     await writeFile(join(OUT, `config-mode-${mode}.txt`), dump.stdout);
     say(`    read ${Object.keys(sweeps[mode]).length} settings`);
@@ -240,8 +280,10 @@ async function main() {
    */
   say('\nEvent stream. Turn any dial by hand during the next 15 seconds.');
   await ask('  Press Enter to start listening: ');
-  const events = await run(['--wait-event=15s'], 40000);
-  const lines = events.stdout.split('\n').filter((l) => /change|event|prop/i.test(l));
+  const events = await cam(['--wait-event=15s'], 40000);
+  const noise = /debug|logfile|mailing list|quoting|Waiting for|gphoto2 as follows|^\s*$/i;
+  const lines = events.stdout.split('\n')
+    .filter((l) => /changed|property|FILEADDED|CAPTURECOMPLETE|UNKNOWN PTP/i.test(l) && !noise.test(l));
   report.phases.events = { raw: events.stdout, matched: lines };
   say(lines.length ? `  ${lines.length} event lines:` : '  nothing reported — polling is the only option');
   for (const l of lines.slice(0, 12)) say(`    ${l.trim()}`);
@@ -260,11 +302,11 @@ async function main() {
     const original = candidate.value;
     const target = candidate.choices.find((c) => c !== original);
     const w0 = Date.now();
-    const set = await run(['--set-config', `${candidate.path}=${target}`], 30000);
+    const set = await cam(['--set-config', `${candidate.path}=${target}`], 30000);
     const setMs = Date.now() - w0;
-    const back = await run(['--get-config', candidate.path], 30000);
+    const back = await cam(['--get-config', candidate.path], 30000);
     const readBack = back.stdout.match(/^Current:\s?(.*)$/m)?.[1];
-    await run(['--set-config', `${candidate.path}=${original}`], 30000);
+    await cam(['--set-config', `${candidate.path}=${original}`], 30000);
     report.phases.write = {
       path: candidate.path, from: original, to: target,
       accepted: set.ok, readBack, confirmed: readBack === target, setMs, restored: original,
