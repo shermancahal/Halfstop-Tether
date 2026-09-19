@@ -43,6 +43,11 @@ are pinned. A waterfall wanting two seconds at f/11 and base ISO has no
 solution, and inventing one would quietly drop something the photographer
 asked for — so it reports the gap, and the caller decides what closes it.
 
+`src/plan/` turns an intent into a plan: the Milky Way, waterfalls and
+timelapse so far, each a thin configuration over those solvers. Every value it
+sets carries the line that produced it, and the reality checks against the
+camera derive themselves from what the body reports rather than from a table.
+
 ```bash
 npm test
 ```
