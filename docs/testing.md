@@ -8,7 +8,10 @@ come with its own.
 
 ## First time on a new Mac
 
+Clones live in `~/Documents/Git`. Every command on this page assumes it.
+
 ```bash
+mkdir -p ~/Documents/Git && cd ~/Documents/Git
 git clone git@github.com:shermancahal/Halfstop-Tether.git
 cd Halfstop-Tether
 npm install
@@ -50,8 +53,11 @@ npm run probe            # needs a camera on USB and gphoto2 on the PATH
 
 The one test that matters most right now, and it does not need Xcode:
 
+It needs no `npm install` — the probe imports nothing but Node's own built-ins.
+
 ```bash
-brew install gphoto2     # macOS
+cd ~/Documents/Git/Halfstop-Tether
+brew install gphoto2     # the only install
 npm run probe
 ```
 
