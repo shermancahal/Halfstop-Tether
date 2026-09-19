@@ -29,6 +29,7 @@ const run = (args, timeout = 60000) =>
 
 const CLAIM_ERROR = /could not claim|\(-53/i;
 let hadToClaim = false;
+let claimRefused = false;
 
 /*
  * macOS starts PTPCamera (ptpcamerad on newer releases) the moment a camera is
@@ -36,10 +37,15 @@ let hadToClaim = false;
  * the camera is connected finds nothing, which is exactly when people try.
  */
 async function freeCamera() {
-  for (const name of ['PTPCamera', 'ptpcamerad']) {
-    await new Promise((resolve) => execFile('killall', [name], () => resolve()));
+  const refused = [];
+  for (const name of ['PTPCamera', 'ptpcamerad', 'cameracaptured']) {
+    const err = await new Promise((resolve) =>
+      execFile('killall', [name], (e, _o, stderr) => resolve(e ? String(stderr || e.message) : null)));
+    /* "no matching processes" is fine — it was not running. Anything else is not. */
+    if (err && !/no matching process/i.test(err)) refused.push(`${name}: ${err.trim()}`);
   }
-  await new Promise((resolve) => setTimeout(resolve, 700));
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return refused;
 }
 
 /* Every camera call goes through here, so a grabbed device is taken back once
@@ -49,7 +55,14 @@ async function cam(args, timeout = 60000) {
   if (!r.ok && CLAIM_ERROR.test(r.stderr + r.stdout)) {
     if (!hadToClaim) say('  macOS had the camera; taking it back...');
     hadToClaim = true;
-    await freeCamera();
+    const refused = await freeCamera();
+    if (refused.length) {
+      /* These daemons live in /usr/libexec and run as root, so an unprivileged
+       * kill cannot touch them. Saying so beats retrying and reporting silence. */
+      say('  could not stop the system camera service without privileges:');
+      for (const line of refused) say(`    ${line}`);
+      claimRefused = true;
+    }
     r = await run(args, timeout);
   }
   return r;
@@ -177,10 +190,20 @@ async function main() {
   if (!paths.length) {
     say('\nThe camera answered nothing. That is a blocked connection, not a limited camera.');
     say(`\n  ${all.stderr.trim().split('\n').slice(-2).join('\n  ')}`);
-    say('\nOn macOS this is almost always the system camera service. Stop it reopening:');
-    say('  1. Open Image Capture, select the Z5, and set the bottom-left');
-    say('     "Connecting this camera opens" to "No application".');
-    say('  2. Unplug the camera, plug it back in, and run the probe again.');
+    if (claimRefused) {
+      say('\nThe system camera service is root-owned and would not stop for you. Try:');
+      say('  sudo killall ptpcamerad ; npm run probe');
+      say('\nIf it returns between calls — gphoto2 reopens the camera on every one —');
+      say('hold it off for the length of the run:');
+      say('  sudo launchctl disable system/com.apple.ptpcamerad');
+      say('  sudo killall ptpcamerad ; npm run probe');
+      say('  sudo launchctl enable system/com.apple.ptpcamerad    # afterwards');
+    } else {
+      say('\nOn macOS this is almost always the system camera service. Stop it reopening:');
+      say('  1. Open Image Capture, select the Z5, and set the bottom-left');
+      say('     "Connecting this camera opens" to "No application".');
+      say('  2. Unplug the camera, plug it back in, and run the probe again.');
+    }
     await writeFile(join(OUT, 'report.json'), JSON.stringify({ ...report, aborted: 'no settings returned' }, null, 2));
     rl.close();
     process.exitCode = 1;
