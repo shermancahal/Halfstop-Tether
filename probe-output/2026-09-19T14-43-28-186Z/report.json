@@ -1,0 +1,21 @@
+{
+  "probedAt": "2026-09-19T14:43:28.189Z",
+  "phases": {
+    "detect": {
+      "output": "Model                          Port            \n----------------------------------------------------------\nNikon Z5                       usb:001,008     \n",
+      "cameras": [
+        "Nikon Z5                       usb:001,008     "
+      ]
+    },
+    "summary": "For debugging messages, please use the --debug option.\nDebugging messages may help finding a solution to your problem.\nIf you intend to send any error or debug messages to the gphoto\ndeveloper mailing list <gphoto-devel@lists.sourceforge.net>, please run\ngphoto2 as follows:\n\n    env LANG=C gphoto2 --debug --debug-logfile=my-logfile.txt --summary\n\nPlease make sure there is sufficient quoting around the arguments.\n\n",
+    "config": {
+      "readMs": 883,
+      "count": 0,
+      "writable": 0,
+      "readonly": 0,
+      "configs": {}
+    }
+  },
+  "gphoto2": "gphoto2 2.5.32",
+  "aborted": "no settings returned"
+}

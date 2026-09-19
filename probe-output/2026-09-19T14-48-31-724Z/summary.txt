@@ -1,0 +1,312 @@
+Camera summary:
+Manufacturer: Nikon Corporation
+Model: Z 5
+  Version: V1.43
+  Serial Number: [redacted]
+Vendor Extension ID: 0xa (1.10)
+Vendor Extension Description: Microsoft.com/DeviceServices: 1.0
+
+Capture Formats: JPEG Undefined Type
+Display Formats: JPEG, Undefined Type, Association/Directory, TIFF, Script, Apple Quicktime, Unknown(b982)
+
+Device Capabilities:
+	File Download, File Deletion, File Upload
+	Generic Image Capture, No Open Capture, Nikon Capture 1, Nikon Capture 2, Nikon Capture 3
+
+Storage Devices Summary:
+store_00020001:
+	StorageDescription: 
+	VolumeLabel: NIKON Z 5   [Slot 2]
+	Storage Type: Removable RAM (memory card)
+	Filesystemtype: Digital Camera Layout (DCIM)
+	Access Capability: Read Only with Object deletion
+	Maximum Capability: 128009109504 (122079 MB)
+	Free Space (Bytes): 96835993600 (92350 MB)
+	Free Space (Images): 1996
+
+Device Property Summary:
+Battery Level             (5001 ro u8 ): Range [1 - 100, step 1] value: 100% (100)
+Image Size                (5003 rw str): Enumeration [
+	'6016x4016',
+	'4512x3008',
+	'3008x2008'
+	] value: '6016x4016'
+Compression Setting       (5004 rw u8 ): Enumeration [0,1,2,3,4,5,7,8,9,10,11,12,13] value: 7
+White Balance             (5005 rw u16): Enumeration [2,4,5,6,7,32784,32785,32786,32787,32790] value: 32790
+F-Number                  (5007 rw u16): Enumeration [280,320,350,400,450,500,560,630,710,800,900,1000,1100,1300,1400,1600,1800,2000,2200] value: f/11 (1100)
+Focal Length              (5008 ro u32): Range [2400 - 7000, step 1] value: 30 mm (3000)
+Focus Mode                (500a ro u16): Enumeration [1,32784,32785,32787] value: AF-S (32784)
+Exposure Metering Mode    (500b rw u16): Enumeration [2,3,4,32784] value: Multi-spot (3)
+Flash Mode                (500c rw u16): Enumeration [2,4,32784,32786] value: Auto (32784)
+Exposure Time             (500d rw u32): Enumeration [1,2,3,4,5,6,8,10,12,15,20,25,31,40,50,62,80,100,125,166,200,250,333,400,500,666,769,1000,1250,1666,2000,2500,3333,4000,5000,6250,7692,10000,13000,16000,20000,25000,30000,40000,50000,60000,80000,100000,130000,150000,200000,250000,300000,4294967295,4294967293] value: 0.001 sec (100)
+Exposure Program Mode     (500e ro u16): Enumeration [1,2,3,4,32784,32848,32849,32850] value: 32848
+Exposure Index (film speed ISO) (500f rw u16): Enumeration [50,64,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600,32000,40000,51200] value: ISO 100 (100)
+Exposure Bias Compensation (5010 rw i16): Enumeration [-5000,-4666,-4333,-4000,-3666,-3333,-3000,-2666,-2333,-2000,-1666,-1333,-1000,-666,-333,0,333,666,1000,1333,1666,2000,2333,2666,3000,3333,3666,4000,4333,4666,5000] value: 0.0 stops (0)
+Date & Time               (5011 rw str): '20260919T104831'
+Still Capture Mode        (5013 rw u16): Enumeration [1,2,32784,32785] value: Single Shot (1)
+Burst Number              (5018 rw u16): Range [1 - 65535, step 1] value: 1
+Focus Metering Mode       (501c rw u16): Enumeration [32784,32785,32791,32792,32793] value: 32792
+Artist                    (501e ro str): '[redacted]'
+Copyright Info            (501f ro str): ''
+UseDeviceStageFlag        (d303 ro u8 ): 1
+[Unknown Property]        (d406 rw str): 'Windows/6.0.5330.0 MTPClassDriver/6.0.5330.0'
+[Unknown Property]        (d407 ro u32): 1
+Reset Bank 0              (d015 rw u8 ): Range [0 - 1, step 1] value: 0
+Raw Compression           (d016 rw u8 ): Range [0 - 1, step 1] value: Lossless (0)
+Auto White Balance Bias   (d017 rw u16): Range [0 - 1224, step 1] value: 612
+Tungsten White Balance Bias (d018 rw u16): Range [0 - 1224, step 1] value: 612
+Fluorescent White Balance Bias (d019 rw u16): Range [0 - 1224, step 1] value: 612
+Daylight White Balance Bias (d01a rw u16): Range [0 - 1224, step 1] value: 612
+Flash White Balance Bias  (d01b rw u16): Range [0 - 1224, step 1] value: 612
+Cloudy White Balance Bias (d01c rw u16): Range [0 - 1224, step 1] value: 612
+Shady White Balance Bias  (d01d rw u16): Range [0 - 1224, step 1] value: 612
+White Balance Colour Temperature (d01e rw u16): Range [2500 - 10000, step 10] value: 5000
+White Balance Preset Number (d01f rw u8 ): Range [1 - 6, step 1] value: 1
+White Balance Preset Name 1 (d021 rw str): '                                    '
+White Balance Preset Name 2 (d022 rw str): '                                    '
+White Balance Preset Name 3 (d023 rw str): '                                    '
+White Balance Preset Name 4 (d024 rw str): '                                    '
+White Balance Preset Value 1 (d026 ro u32): 250088196
+White Balance Preset Value 2 (d027 ro u32): 250088196
+White Balance Preset Value 3 (d028 ro u32): 250088196
+White Balance Preset Value 4 (d029 ro u32): 250088196
+Lens Focal Length (Non CPU) (d02e rw u8 ): Range [0 - 40, step 1] value: 25
+Lens Maximum Aperture (Non CPU) (d02f rw u8 ): Range [0 - 22, step 1] value: 10
+Shooting Mode             (d030 rw u8 ): Range [0 - 3, step 1] value: 0
+Color Space               (d032 rw u8 ): Range [0 - 1, step 1] value: 1
+Flicker Reduction         (d034 rw u8 ): Range [0 - 2, step 1] value: 2
+1_Mode                    (d038 rw str): '                                    '
+WhiteBalancePresetName6   (d039 rw str): '                                    '
+WhiteBalanceTunePreset5   (d03a rw u16): Range [0 - 1224, step 1] value: 612
+WhiteBalanceTunePreset6   (d03b rw u16): Range [0 - 1224, step 1] value: 612
+WhiteBalancePresetProtect5 (d03c rw u8 ): Range [0 - 1, step 1] value: 0
+WhiteBalancePresetProtect6 (d03d rw u8 ): Range [0 - 1, step 1] value: 0
+WhiteBalancePresetValue5  (d03e ro u32): 250088196
+WhiteBalancePresetValue6  (d03f ro u32): 250088196
+Reset Menu Bank           (d045 rw u8 ): Range [0 - 1, step 1] value: 0
+AFStillLockOnAcross       (d046 rw u8 ): Range [1 - 5, step 1] value: 3
+PTP_DPC_NIKON_A1AFCModePriority (d048 rw u8 ): Range [0 - 1, step 1] value: 1
+PTP_DPC_NIKON_A2AFSModePriority (d049 rw u8 ): Range [0 - 1, step 1] value: 0
+Focus Area Wrap           (d04f rw u8 ): Range [0 - 1, step 1] value: On (1)
+Enable Copyright          (d053 rw u8 ): Range [0 - 1, step 1] value: On (1)
+Auto ISO                  (d054 rw u8 ): Range [0 - 1, step 1] value: Off (0)
+Exposure Step             (d056 rw u8 ): Range [0 - 1, step 1] value: 1/3 (0)
+Centre Weight Area        (d059 rw u8 ): Range [0 - 1, step 1] value: 8 mm (1)
+Exposure Base Matrix      (d05a rw i8 ): Range [-6 - 6, step 1] value: 0
+Exposure Base Center      (d05b rw i8 ): Range [-6 - 6, step 1] value: 0
+Exposure Base Spot        (d05c rw i8 ): Range [-6 - 6, step 1] value: 0
+Live View AF Focus        (d061 rw u8 ): Enumeration [0,1,4] value: 0
+Angle Level               (d067 ro i32): 4.4' (285524)
+Shooting Speed            (d068 rw u8 ): Range [5 - 8, step 1] value: 6
+Maximum Shots             (d069 rw u8 ): Range [1 - 100, step 1] value: 100
+Exposure delay mode       (d06a rw u8 ): Range [0 - 5, step 1] value: Off (0)
+Long Exposure Noise Reduction (d06b rw u8 ): Range [0 - 1, step 1] value: Off (0)
+File Number Sequencing    (d06c rw u8 ): Range [0 - 2, step 1] value: On (1)
+High ISO noise reduction  (d070 rw u8 ): Range [0 - 3, step 1] value: 0
+Artist Name               (d072 rw str): '[redacted]'
+Copyright Information     (d073 rw str): ''
+Flash Sync. Speed         (d074 rw u8 ): Range [0 - 6, step 1] value: 1
+Flash Shutter Speed       (d075 rw u8 ): Range [0 - 11, step 1] value: 1/60s (0)
+Bracket Set               (d078 rw u8 ): Range [0 - 4, step 1] value: AE & Flash (0)
+Manual Mode Bracketing    (d079 rw u8 ): Range [0 - 3, step 1] value: 0
+Bracket Order             (d07a rw u8 ): Range [0 - 1, step 1] value: MTR > Under (0)
+NIKON Auto Bracketing Set (d07c ro u8 ): Enumeration [0,1] value: 1
+AngleLevelPitching        (d07d ro i32): 23461888
+AngleLevelYawing          (d07e ro i32): -1
+No CF Card Release        (d08a rw u8 ): Range [0 - 1, step 1] value: On (0)
+AF Area Point             (d08d rw u8 ): Range [0 - 1, step 1] value: On (0)
+Clean Image Sensor        (d08f rw u8 ): Range [0 - 2, step 1] value: 2
+Image Comment String      (d090 rw str): ''
+Image Comment Enable      (d091 rw u8 ): Range [0 - 1, step 1] value: Off (0)
+Manual Set Lens Number    (d093 rw u8 ): Range [0 - 19, step 1] value: 1
+RetractableLensWarning    (d09c ro u8 ): Range [0 - 1, step 1] value: 0
+FaceDetection             (d09d rw u8 ): Range [0 - 3, step 1] value: 2
+Movie Screen Size         (d0a0 rw u64): Enumeration [1080873187700244480,1080873187699916800,1080873187699851264,540436593853071360,540436593852416000,540436593851105280,540436593850777600,540436593850712064] value: 1080873187700244480
+Movie Microphone          (d0a2 rw u8 ): Range [0 - 5, step 1] value: 0
+Movie Card Slot           (d0a3 rw u8 ): Enumeration [1,2] value: 1
+MovRecProhibitCondition   (d0a4 ro u32): 24576
+Movie Quality             (d0a7 rw u8 ): Range [0 - 1, step 1] value: 1
+MovRecordMicrophoneLevelValue (d0a8 rw u8 ): Range [1 - 20, step 1] value: 15
+MovWindNoiseReduction     (d0aa rw u8 ): Range [0 - 1, step 1] value: 0
+MovRecordingZone          (d0ac rw u8 ): Range [0 - 1, step 1] value: 0
+MovISOAutoControl         (d0ad rw u8 ): Range [0 - 1, step 1] value: 1
+MovISOAutoHighLimit       (d0ae rw u8 ): Range [0 - 28, step 1] value: 28
+MovFileType               (d0af rw u8 ): Enumeration [0,1] value: 0
+ExposureIndexEx           (d0b4 rw u32): Enumeration [50,64,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600,32000,40000,51200,64000,81200,102400] value: 100
+ISOControlSensitivity     (d0b5 ro u32): 100
+FlickerReductionSetting   (d0b7 rw u8 ): Range [0 - 1, step 1] value: 1
+DiffractionCompensatipn   (d0ba rw u8 ): Enumeration [0,1] value: 1
+MovieAutoDistortion       (d0bc rw u8 ): Enumeration [0,1] value: 1
+[Unknown Property]        (d0bd ro u32): 2147483648
+Bracketing Enable         (d0c0 rw u8 ): Range [0 - 1, step 1] value: Off (0)
+Exposure Bracketing Step  (d0c1 rw u8 ): Range [0 - 5, step 1] value: 3
+Exposure Bracketing Program (d0c2 rw u8 ): Range [0 - 8, step 1] value: 8
+Auto Exposure Bracket Count (d0c3 ro u8 ): Range [1 - 1, step 1] value: 2
+White Balance Bracket Step (d0c4 ro u8 ): Range [0 - 2, step 1] value: 0
+White Balance Bracket Program (d0c5 ro u8 ): Range [0 - 8, step 1] value: 8
+ADLBracketingPattern      (d0c6 ro u8 ): Range [0 - 4, step 1] value: 4
+ADLBracketingStep         (d0c7 ro u8 ): Range [0 - 4, step 1] value: 0
+[Unknown Property]        (d0cd rw u8 ): Enumeration [0,1] value: 0
+Lens ID                   (d0e0 ro u16): 13
+Lens Sort                 (d0e1 ro u8 ): Range [0 - 1, step 1] value: 1
+Lens Type                 (d0e2 ro u64): 0
+Min. Focal Length         (d0e3 ro u32): 24 mm (2400)
+Max. Focal Length         (d0e4 ro u32): 70 mm (7000)
+Max. Aperture at Min. Focal Length (d0e5 ro u16): f/2.8 (280)
+Max. Aperture at Max. Focal Length (d0e6 ro u16): f/2.8 (280)
+LensTypeML                (d0e7 ro u64): 64
+Vignette Control          (d0f7 rw u8 ): Range [0 - 3, step 1] value: 0
+Auto Distortion Control   (d0f8 rw u8 ): Range [0 - 1, step 1] value: 1
+UserMode                  (d0fc ro u8 ): Range [19 - 23, step 1] value: 22
+Nikon Exposure Time       (d100 rw u32): Enumeration [73536,71936,70536,69536,68736,68036,67536,67136,66786,66536,66336,66176,66036,65936,65856,65786,65736,65696,65661,65636,65616,65596,65586,65576,65566,65561,65556,65551,65549,65546,65544,65542,65541,65540,65539,655385,65538,655376,655373,65537,851978,1048586,131073,1638410,196609,262145,327681,393217,524289,655361,851969,983041,1310721,1638401,1966081,4294967295,4294967293,4294967294] value: 65636
+AC Power                  (d101 ro u8 ): Range [0 - 1, step 1] value: No (0)
+Warning Status            (d102 ro u32): 0
+AF Locked                 (d104 ro u8 ): Range [0 - 1, step 1] value: No (0)
+AE Locked                 (d105 ro u8 ): Range [0 - 1, step 1] value: No (0)
+FV Locked                 (d106 ro u8 ): Range [0 - 1, step 1] value: No (0)
+Flexible Program          (d109 ro i8 ): Range [-30 - 30, step 2] value: 0
+Recording Media           (d10b rw u8 ): Range [0 - 2, step 1] value: Card (0)
+USB Speed                 (d10c ro u8 ): Range [0 - 2, step 1] value: USB 2.0 (1)
+Camera Orientation        (d10e ro u8 ): Range [0 - 3, step 1] value: 0' (0)
+TV Lock Setting           (d112 rw u8 ): Range [0 - 1, step 1] value: No (0)
+AV Lock Setting           (d113 rw u8 ): Range [0 - 1, step 1] value: No (0)
+ExposureCompFlashUsed     (d118 rw u8 ): Range [0 - 1, step 1] value: 0
+External Flash Attached   (d120 ro u8 ): Range [0 - 1, step 1] value: No (0)
+External Flash Status     (d121 ro u8 ): Range [0 - 1, step 1] value: No (0)
+External Flash Sort       (d122 ro u8 ): Range [0 - 3, step 1] value: 0
+External Flash Compensation (d124 ro i8 ): Range [-18 - 18, step 1] value: 0 (0)
+External Flash Mode       (d125 ro u8 ): Range [0 - 7, step 1] value: 0
+Flash Exposure Compensation (d126 rw i8 ): Range [-18 - 6, step 2] value: 0.0 stops (0)
+ExternalFlashMultiFlashMode (d12d ro u8 ): Range [0 - 1, step 1] value: 0
+ConnectionPath            (d12e ro u8 ): Enumeration [0,1,2] value: 0
+HDR Mode                  (d130 rw u8 ): Range [0 - 2, step 1] value: 0
+HDR High Dynamic          (d131 rw u8 ): Range [0 - 3, step 1] value: 0
+HDR Smoothing             (d132 rw u8 ): Range [0 - 2, step 1] value: 1
+HDRSaveIndividualImages   (d133 rw u8 ): Enumeration [0,1] value: 1
+VibrationReduction        (d138 rw u8 ): Enumeration [0,1,2] value: 1
+WBAutoType                (d141 rw u8 ): Range [0 - 2, step 1] value: 0
+Slot 2 Save Mode          (d148 rw u8 ): Enumeration [0,1,2] value: 0
+Raw Bit Mode              (d149 rw u8 ): Range [0 - 1, step 1] value: 1
+Active D-Lighting         (d14e rw u8 ): Range [0 - 5, step 1] value: 1
+Fluorescent Type          (d14f rw u8 ): Range [0 - 6, step 1] value: 3
+Tune Colour Temperature   (d150 rw u8 ): Range [0 - 48, step 1] value: 24
+Tune Preset 1             (d152 rw u16): Range [0 - 1224, step 1] value: 612
+Tune Preset 2             (d153 rw u16): Range [0 - 1224, step 1] value: 612
+Tune Preset 3             (d154 rw u16): Range [0 - 1224, step 1] value: 612
+Tune Preset 4             (d155 rw u16): Range [0 - 1224, step 1] value: 612
+WBPresetProtect1          (d158 rw u8 ): Range [0 - 1, step 1] value: 0
+WBPresetProtect2          (d159 rw u8 ): Range [0 - 1, step 1] value: 0
+WBPresetProtect3          (d15a rw u8 ): Range [0 - 1, step 1] value: 0
+ActiveFolder              (d15b ro u16): Range [100 - 999, step 1] value: 112
+WBPresetProtect4          (d15c rw u8 ): Range [0 - 1, step 1] value: 0
+WhiteBalanceReset         (d15d rw u8 ): Range [0 - 1, step 1] value: 0
+WhiteBalanceNaturalLightAutoBias (d15e rw u16): Range [0 - 1224, step 1] value: 612
+Auto ISO P/A/DVP Setting  (d164 rw u8 ): Range [0 - 52, step 1] value: 52
+ISO Auto                  (d16a rw u8 ): Range [1 - 1, step 1] value: 1
+LowLightAF                (d17a rw u8 ): Enumeration [0,1] value: 1
+ApplyLiveViewSetting      (d17b rw u8 ): Enumeration [0,1] value: 1
+MovieAfSpeed              (d17c rw i8 ): Range [-5 - 5, step 1] value: 0
+MovieAfSpeedWhenToApply   (d17d rw u8 ): Enumeration [0,1] value: 0
+MovieAfTrackingSensitivity (d17e rw u8 ): Range [1 - 7, step 1] value: 4
+ISO Auto High Limit       (d183 rw u8 ): Range [0 - 36, step 1] value: 32
+MovieReleaseButton        (d197 rw u8 ): Enumeration [0,1] value: 0
+FlashISOAutoHighLimit     (d199 rw u8 ): Range [0 - 37, step 1] value: 37
+Live View Status          (d1a2 ro u8 ): Range [0 - 1, step 1] value: No (0)
+Live View Prohibit Condition (d1a4 ro u32): 0
+LiveViewSelector          (d1a6 ro u8 ): Enumeration [0,1] value: 0
+MovieShutterSpeed         (d1a8 ro u32): Enumeration [73536,71936,70536,69536,68736,68036,67536,67136,66786,66536,66336,66176,66036,65936,65856,65786,65736,65696,65661,65636,65616,65596,65586,65576,65566] value: 65566
+MovieFNumber              (d1a9 ro u16): Enumeration [0] value: 0
+MovieISO                  (d1aa rw u32): Enumeration [100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600] value: 100
+MovieExposureBiasCompensation (d1ab ro i16): Enumeration [-3000,-2666,-2333,-2000,-1666,-1333,-1000,-666,-333,0,333,666,1000,1333,1666,2000,2333,2666,3000] value: 0
+LiveViewMovieMode         (d1ac rw u8 ): Enumeration [1,2,3] value: 2
+LiveViewPhotography       (d1ad rw u8 ): Range [0 - 1, step 1] value: 0
+MovieExposureMeteringMode (d1af rw u16): Enumeration [2,3,32784] value: 3
+Exposure Display Status   (d1b0 ro u8 ): Range [0 - 3, step 1] value: No (0)
+Exposure Indicate Status  (d1b1 ro i8 ): Range [-60 - 60, step 1] value: -1.8 stops (-22)
+Info Display Error Status (d1b2 ro u8 ): Range [0 - 1, step 1] value: No (0)
+Exposure Indicate Lightup (d1b3 ro u8 ): Range [0 - 1, step 1] value: No (0)
+ContinousShootingCount    (d1b4 ro u16): Range [0 - 360, step 1] value: 16
+MovieRecFrameCount        (d1b7 ro u8 ): Range [0 - 40, step 1] value: 16
+CameraLiveViewStatus      (d1b8 ro u8 ): Enumeration [0,1] value: 1
+DetectionPeaking          (d1b9 rw u8 ): Enumeration [0,1,2,3] value: 2
+LiveViewTFTStatus         (d1ba ro u8 ): Enumeration [0,1] value: 0
+LiveViewImageStatus       (d1bb ro u8 ): Enumeration [0,1] value: 0
+LiveViewImageCompression  (d1bc rw u8 ): Enumeration [0,1,2,3,4,5] value: 0
+LiveViewZoomArea          (d1bd rw u16): Enumeration [0,360,720,1440] value: 0
+[Unknown Property]        (d1c5 rw u8 ): Enumeration [0,1] value: 0
+ExternalRecordingControl  (d1de rw u8 ): Enumeration [0,1] value: 0
+HighlightBrightness       (d1df rw u16): Enumeration [180,191,202,213,224,235,248,255] value: 248
+SBWirelessMode            (d1e2 ro u8 ): Enumeration [] value: 0
+SBWirelessMultipleFlashMode (d1e3 ro u8 ): Enumeration [] value: 0
+SBUsableGroup             (d1e4 ro u32): 0
+WirelessCLSEntryMode      (d1e5 ro u8 ): Enumeration [0,1] value: 0
+SBPINCode                 (d1e6 ro u32): Range [0 - 9999, step 1] value: 0
+RadioMultipleFlashChannel (d1e7 ro u8 ): 0
+OpticalMultipleFlashChannel (d1e8 ro u8 ): Enumeration [255] value: 255
+FlashRangeDisplay         (d1e9 ro u8 ): Enumeration [0,1] value: 0
+AllTestFiringDisable      (d1ea ro u8 ): 1
+SBSettingMemberLock       (d1ec rw u8 ): Enumeration [0,1] value: 0
+SBIntegrationFlashReady   (d1ed ro u8 ): Enumeration [0,1] value: 0
+ApplicationMode           (d1f0 rw u8 ): Range [0 - 1, step 1] value: 0
+ExposureRemaining         (d1f1 ro u32): Range [0 - 4294967295, step 1] value: 1996
+ActiveSlot                (d1f2 ro u8 ): Enumeration [0,1,2,3] value: 2
+ISOAutoShutterCorrectionTime (d1f4 rw i8 ): Range [-2 - 2, step 1] value: 0
+MovieAfAreaMode           (d1f8 rw u16): Enumeration [32784,32785,32792,32793] value: 32785
+MovieVibrationReduction   (d1f9 rw u8 ): Enumeration [0,1,2,100] value: 100
+MovieFocusMode            (d1fa rw u8 ): Enumeration [0,1,2,4] value: 2
+RecordTimeCodes           (d1fb rw u8 ): Enumeration [0,1,2] value: 0
+CountUpMethod             (d1fc ro u8 ): Enumeration [0,1] value: 0
+TimeCodeOrigin            (d1fd ro [u8 ]): a[5] 2,0,0,0,0
+DropFrame                 (d1fe ro u8 ): Enumeration [0,1] value: 1
+[Unknown Property]        (d1ff rw u16): Enumeration [1,2] value: 1
+Active Pic Ctrl Item      (d200 rw u16): Enumeration [1,2,3,4,5,6,7,8,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,201,202,203,204,205,206,207,208,209] value: 6
+ElectronicFrontCurtainShutter (d20d rw u8 ): Enumeration [0,1,2] value: 0
+MovieResetShootingMenu    (d20e rw u8 ): Range [0 - 1, step 1] value: 0
+MovieCaptureAreaCrop      (d20f ro u8 ): Range [0 - 1, step 1] value: 0
+MovieWbAutoType           (d211 rw u8 ): Range [0 - 2, step 1] value: 0
+MovieWbTuneAuto           (d212 rw u16): Range [0 - 1224, step 1] value: 612
+MovieWbTuneIncandescent   (d213 rw u16): Range [0 - 1224, step 1] value: 612
+MovieWbFlourescentType    (d214 rw u8 ): Range [0 - 6, step 1] value: 3
+MovieWbTuneFlourescent    (d215 rw u16): Range [0 - 1224, step 1] value: 612
+MovieWbTuneSunny          (d216 rw u16): Range [0 - 1224, step 1] value: 612
+MovieWbTuneCloudy         (d218 rw u16): Range [0 - 1224, step 1] value: 612
+MovieWbTuneShade          (d219 rw u16): Range [0 - 1224, step 1] value: 612
+MovieWbColorTemp          (d21a rw u16): Range [2500 - 10000, step 10] value: 5000
+MovieWbTuneColorTemp      (d21b rw u8 ): Range [0 - 48, step 1] value: 24
+MovieWbPresetData0        (d21c rw u8 ): Range [1 - 6, step 1] value: 1
+MovieWbPresetDataComment1 (d21d rw str): '[redacted]'
+MovieWbPresetDataComment2 (d21e rw str): '[redacted]'
+MovieWbPresetDataComment3 (d21f rw str): '[redacted]'
+MovieWbPresetDataComment4 (d220 rw str): '[redacted]'
+MovieWbPresetDataComment5 (d221 rw str): '[redacted]'
+MovieWbPresetDataComment6 (d222 rw str): '[redacted]'
+MovieWbPresetDataValue1   (d223 ro u32): 250088196
+MovieWbPresetDataValue2   (d224 ro u32): 250088196
+MovieWbPresetDataValue3   (d225 ro u32): 250088196
+MovieWbPresetDataValue4   (d226 ro u32): 250088196
+MovieWbPresetDataValue5   (d227 ro u32): 250088196
+MovieWbPresetDataValue6   (d228 ro u32): 250088196
+MovieWbTunePreset1        (d229 rw u16): Range [0 - 1224, step 1] value: 612
+MovieWbTunePreset2        (d22a rw u16): Range [0 - 1224, step 1] value: 612
+MovieWbTunePreset3        (d22b rw u16): Range [0 - 1224, step 1] value: 612
+MovieWbTunePreset4        (d22c rw u16): Range [0 - 1224, step 1] value: 612
+MovieWbTunePreset5        (d22d rw u16): Range [0 - 1224, step 1] value: 612
+MovieWbTunePreset6        (d22e rw u16): Range [0 - 1224, step 1] value: 612
+MovieWbPresetProtect1     (d22f rw u8 ): Range [0 - 1, step 1] value: 0
+MovieWbPresetProtect2     (d230 rw u8 ): Range [0 - 1, step 1] value: 0
+MovieWbPresetProtect3     (d231 rw u8 ): Range [0 - 1, step 1] value: 0
+MovieWbPresetProtect4     (d232 rw u8 ): Range [0 - 1, step 1] value: 0
+MovieWbPresetProtect5     (d233 rw u8 ): Range [0 - 1, step 1] value: 0
+MovieWbPresetProtect6     (d234 rw u8 ): Range [0 - 1, step 1] value: 0
+MovieWhiteBalanceReset    (d235 rw u8 ): Range [0 - 1, step 1] value: 0
+MovieNrHighISO            (d236 rw u8 ): Range [0 - 3, step 1] value: 0
+MovieActivePicCtrlItem    (d237 rw u16): Enumeration [1,2,3,4,5,6,7,8,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,201,202,203,204,205,206,207,208,209] value: 6
+ExposureBaseCompHighlight (d239 rw i8 ): Range [-6 - 6, step 1] value: 0
+MovieWhiteBalance         (d23a rw u16): Enumeration [2,4,5,6,32784,32785,32786,32787,32789,32790] value: 32790
+MovieActiveDLighting      (d23b rw u8 ): Range [0 - 5, step 1] value: 0
+MovieWbTuneNatural        (d23c rw u16): Range [0 - 1224, step 1] value: 612
+MovieAttenuator           (d23d rw u8 ): Enumeration [0,1] value: 0
+MovieVignetteControl      (d23e rw u8 ): Enumeration [0,1,2,3,100] value: 2
+MovieDiffractionCompensation (d23f rw u8 ): Enumeration [0,1] value: 1
+ElectronicVR              (d314 ro u8 ): Range [0 - 1, step 1] value: 0
+
