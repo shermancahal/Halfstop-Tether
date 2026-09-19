@@ -234,31 +234,63 @@ a dial forbids. It asks the photographer to move the dial.
 
 ---
 
+## What the camera actually said
+
+Probed over USB on 19 September 2026, gphoto2 2.5.32. `probe-output/` holds the
+run.
+
+**Live view works.** 640 x 424 per frame, about 5.4 KB of JPEG. So Nikon's own
+NX Tether offering live view on the Z6 and not here is a product tier, exactly
+as suspected, and the viewfinder, click-to-focus and a magnified focus check are
+all reachable. The frame is small, which is the constraint `docs/focus.md`
+already plans around.
+
+**Manual focus drive is supported.** The fine-focus work rests on this and it is
+there. Live view zoom is not, and neither is starlight view — the latter no
+surprise, since it lives in the newer bodies' property block.
+
+**409 settings, 276 of them writable** — far more than Nikon's own software
+exposes for this body.
+
+**A descriptor moves with camera state, and now it is measured rather than
+argued.** Ten settings change writability with the mode dial and six change
+their legal values:
+
+| Setting | M | A | S | P |
+| --- | --- | --- | --- | --- |
+| F-Number | yes | yes | no | no |
+| Shutter speed | yes | no | yes | no |
+| Flexible program | no | no | no | yes |
+| TV lock | yes | no | no | no |
+| AV lock | yes | yes | no | no |
+
+Textbook exposure semantics, and precisely the three-state control design: the
+app can derive *why* a control is inert from what the camera reports, with no
+hardcoded table. Flash mode carries four choices in M and S against six in A and
+P. Shutter speed carries 55 values in M against 54 everywhere else, and that
+extra one is almost certainly bulb — a plan that cached M's list and applied it
+in A would offer an exposure the camera will refuse.
+
+**The event stream is real.** 226 lines in fifteen seconds of turning dials,
+carrying property names and new values — `shutterspeed2` to `1/…`,
+`flashmode` to `Auto`, white balance colour temperature, the lock settings.
+Some arrive as bare `UNKNOWN PTP Event` with a parameter and no name. It is
+richer than the pessimistic case, and it still does not prove *every* change
+fires one, so the tiered poll stays until something proves it redundant.
+
+**Ignore the timings.** A 3069 ms full read and a 3773 ms write are gphoto2's
+numbers, not the camera's: every CLI call spawns a process, opens the device,
+enumerates it, works, and closes. Re-measure over a held session before any of
+it reaches a design.
+
+---
+
 ## Still to settle
 
-Two of the four questions this page opened with are now answered, and by the
-strongest kind of evidence: a third-party app doing the thing on this camera.
-
-**Live view exists on this body — settled.** Cascable streams the Z5's
-viewfinder, with live view zoom, over both USB and Wi-Fi. So the omission in
-Nikon's own NX Tether, which offers live view on the Z6 and up but not here, is
-a product tier and not a hardware limit. Click-to-focus, a live histogram and a
-magnified focus check are all in reach. What remains is measurement — the frame
-size and the frame rate — which the probe reports.
-
-**Wi-Fi carries control, not just transfer — settled.** Same evidence, and it
-sets the connection path: SnapBridge Wi-Fi Mode rather than Connect to PC.
-
-What is genuinely open needs the camera on the desk, or a decision:
-
-1. **Which properties does this body actually expose,** which are writable, and
-   which change writability or legal values when the mode dial moves. The whole
-   mirroring design rests on that last one being true, and `tools/probe.mjs`
-   measures it directly by sweeping the dial and diffing the dumps.
-2. **Does a hand on a dial produce an event, or must it be polled for?** If
-   nothing is volunteered, the tiered poll is not an optimisation but the only
-   thing keeping the app honest. The probe listens for fifteen seconds and says.
-3. **The transport is decided** — raw PTP, spoken directly, because scoping the
-   app to iOS and Android removes every other option. `docs/transport.md` has
-   the reasoning, the per-platform shims, and the three things to verify on
-   device before anything is built on them.
+1. **Does the Z5 accept a Wi-Fi control session?** Cascable says yes and
+   reaches Nikon bodies through SnapBridge Wi-Fi Mode. Untested here.
+2. **The real latencies,** over a session held open rather than a CLI that
+   reopens the camera every call.
+3. **`PTPNotAuthorizedToSendCommand`, error −21249** — whether iOS will pass
+   these same commands through `ImageCaptureCore`. The one unknown that could
+   still reshape the iOS half, and the desktop probe cannot answer it.

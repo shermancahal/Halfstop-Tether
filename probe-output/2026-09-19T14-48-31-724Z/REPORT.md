@@ -4,7 +4,7 @@
 - gphoto2: gphoto2 2.5.32
 - Settings exposed: **409** (276 writable)
 - Full read takes: **3069 ms**
-- Live view: **no**
+- Live view: **yes — 640x424, ~5.4 KB/frame** (the run recorded "no"; the probe looked for the wrong filename)
 - Dial changes writability of: **10** settings
 - Dial changes legal values of: **6** settings
 - Events on a hand-turned dial: **226** lines

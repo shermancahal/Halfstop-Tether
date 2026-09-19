@@ -215,18 +215,26 @@ async function main() {
   /* 3 — live view. The question Nikon's own software says no to on this body. */
   say('\nLive view...');
   const previewPath = join(OUT, 'liveview.jpg');
+  const thumbPath = join(OUT, 'thumb_liveview.jpg');
+  /* gphoto2 prefixes preview captures with thumb_, so the file it writes is not
+   * the filename it was given. Accept either. */
+  const previewFile = async () => {
+    for (const candidate of [previewPath, thumbPath]) {
+      try { await stat(candidate); return candidate; } catch { /* keep looking */ }
+    }
+    return null;
+  };
   const preview = await cam(['--capture-preview', '--force-overwrite', `--filename=${previewPath}`], 45000);
   let live = { ok: false };
-  if (preview.ok) {
-    try {
-      const buf = await readFile(previewPath);
-      const size = jpegSize(buf);
-      live = { ok: true, bytes: (await stat(previewPath)).size, ...size };
-      say(`  yes — ${size?.width}x${size?.height}, ${live.bytes} bytes`);
-    } catch {
-      live = { ok: false, note: 'command succeeded but no readable frame' };
-      say('  command succeeded but produced no readable frame');
-    }
+  const found = preview.ok ? await previewFile() : null;
+  if (found) {
+    const buf = await readFile(found);
+    const size = jpegSize(buf);
+    live = { ok: true, bytes: buf.length, file: found, ...size };
+    say(`  yes — ${size?.width}x${size?.height}, ${buf.length} bytes`);
+  } else if (preview.ok) {
+    live = { ok: false, note: 'command succeeded but wrote no frame we could find' };
+    say('  command succeeded but produced no readable frame');
   } else {
     live = { ok: false, stderr: preview.stderr.trim() };
     say(`  no — ${preview.stderr.trim().split('\n').slice(-1)[0]}`);
@@ -241,6 +249,7 @@ async function main() {
     for (let i = 0; i < n; i++) {
       const r = await cam(['--capture-preview', '--force-overwrite', `--filename=${join(OUT, 'lv-rate.jpg')}`], 20000);
       if (r.ok) got++;
+      /* Each call re-opens the device, so this is gphoto2's rate, not the camera's. */
     }
     const fps = got / ((Date.now() - start) / 1000);
     report.phases.liveview.fps = Number(fps.toFixed(2));
