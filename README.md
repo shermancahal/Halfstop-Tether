@@ -32,10 +32,16 @@ argument for existing.
 
 Design, a probe that has been run, and the solvers. No app yet.
 
-`src/photo/` is the arithmetic every plan comes out of — the exposure equation,
-the NPF limit, hyperfocal and the diffraction ceiling, the neutral density a
-target shutter needs, and whether a sequence will survive its card and its
-battery. Pure functions, no camera, no network, no model, 39 tests.
+`src/photo/` is the arithmetic every plan comes out of — the exposure triangle
+solved under whatever an intent holds fixed, the NPF limit, hyperfocal and the
+diffraction ceiling, the neutral density a target shutter needs, whether a
+sequence will survive its card and its battery, and what to switch off so the
+camera holds still. Pure functions, no camera, no network, no model, 55 tests.
+
+The solver deliberately refuses to balance an exposure when all three corners
+are pinned. A waterfall wanting two seconds at f/11 and base ISO has no
+solution, and inventing one would quietly drop something the photographer
+asked for — so it reports the gap, and the caller decides what closes it.
 
 ```bash
 npm test
