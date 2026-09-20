@@ -350,8 +350,6 @@ async function main() {
     say('  skipped — nothing safely writable in this mode');
   }
 
-  await writeFile(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
-
   /* Focus control rides on live view, so report the two together. */
   const focusPaths = Object.keys(baseline).filter((p) => /manualfocusdrive|focusmode|viewfinder|zoomratio|starlight/i.test(p));
   report.phases.focus = {
@@ -362,6 +360,8 @@ async function main() {
   };
   say(`\nFocus control: manual drive ${report.phases.focus.manualFocusDrive ? 'yes' : 'no'}` +
       `, live view zoom ${report.phases.focus.liveViewZoom ? 'yes' : 'no'}`);
+
+  await writeFile(join(OUT, 'report.json'), JSON.stringify(report, null, 2));
 
   const lv = report.phases.liveview;
   const sweep = report.phases.modeSweep;

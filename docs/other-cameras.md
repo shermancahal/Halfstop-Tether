@@ -5,6 +5,24 @@ closed without buying a shelf of bodies.
 
 ---
 
+## How to add a camera
+
+Run the probe, turn its output into a fixture, drop the fixture in. No code.
+
+```bash
+npm run probe
+node tools/make-fixture.mjs probe-output/<timestamp> fixtures/<make>-<model>.json
+npm test
+```
+
+The suite discovers every file in `fixtures/` and runs the whole plan layer
+against each one: that the body reports a mode where an intent's pins are
+writable, that solved values are ones it will actually accept, that it is asked
+for the dial when it is in a mode that will not allow the plan, and that every
+number carries a reason. A camera joins the test suite by existing as a file.
+
+---
+
 ## The probe is already most of the answer
 
 `tools/probe.mjs` writes a machine-readable description of a camera's entire

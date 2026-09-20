@@ -48,6 +48,10 @@ timelapse so far, each a thin configuration over those solvers. Every value it
 sets carries the line that produced it, and the reality checks against the
 camera derive themselves from what the body reports rather than from a table.
 
+`fixtures/` holds cameras as files, produced by the probe. Every one of them
+is exercised by the test suite on machines that have never seen the body —
+`docs/other-cameras.md` explains how to add one.
+
 ```bash
 npm test
 ```
