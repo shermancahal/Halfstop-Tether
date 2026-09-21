@@ -73,13 +73,36 @@ jobs:
     steps:
       # A deploy that quietly changed nothing looks exactly like one that
       # worked. This reads the live site and fails if it is not this commit.
+      #
+      # It waits up to five minutes, because the first deploy to a new custom
+      # domain cannot be served over HTTPS until Pages has issued a
+      # certificate for it, and that takes minutes rather than seconds. A
+      # shorter window fails a deploy that is merely young.
       - name: Read deployed.txt from the live site
         run: |
-          sleep 20
-          served=$(curl -fsSL --retry 5 --retry-delay 10 https://tether.halfstop.app/deployed.txt | head -1)
+          deadline=$((SECONDS + 300))
+          served=""
+          until [ $SECONDS -ge $deadline ]; do
+            served=$(curl -fsSL --max-time 20 https://tether.halfstop.app/deployed.txt 2>/dev/null | head -1 || true)
+            [ -n "$served" ] && break
+            echo "not serving yet (${SECONDS}s) — waiting for DNS and the certificate"
+            sleep 15
+          done
+
+          if [ -z "$served" ]; then
+            echo "::error::Nothing served at tether.halfstop.app after five minutes."
+            echo "Check Settings -> Pages shows the custom domain with its DNS verified,"
+            echo "and that no A record competes with the CNAME to shermancahal.github.io."
+            exit 1
+          fi
+
           echo "live:  $served"
           echo "built: $GITHUB_SHA"
-          test "$served" = "$GITHUB_SHA"
+          if [ "$served" != "$GITHUB_SHA" ]; then
+            echo "::error::The live site is serving a different commit. Pages may still be"
+            echo "propagating, or an earlier run won the race. Re-run this job."
+            exit 1
+          fi
 
       - name: The modules the page needs are actually served
         run: |
