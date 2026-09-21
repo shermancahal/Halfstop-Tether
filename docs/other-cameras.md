@@ -5,6 +5,23 @@ closed without buying a shelf of bodies.
 
 ---
 
+## What a fixture does not contain
+
+A camera knows its owner's name — it is in the Artist field, written into every
+photograph's metadata — along with its own serial number and whatever was typed
+into the image comment. None of that is needed to plan a photograph.
+
+So the probe removes it as it writes, not before publishing: anyone sending a
+fixture should not have to know this. `src/camera/privacy.mjs` blanks the value
+of any setting whose path or label names a serial, an artist, a copyright, a
+comment or an owner, and leaves the property itself intact — its code, its type
+and its writability still describe the camera completely.
+
+`node tools/scrub.mjs <dir>` cleans a run captured before that was true, and a
+test fails the build if anything committed still carries one.
+
+---
+
 ## How to add a camera
 
 Run the probe, turn its output into a fixture, drop the fixture in. No code.

@@ -17,6 +17,7 @@ import { execFile } from 'node:child_process';
 import { mkdir, writeFile, readFile, stat } from 'node:fs/promises';
 import { createInterface } from 'node:readline/promises';
 import { join } from 'node:path';
+import { scrubConfigs, scrubDump, scrubSummary } from '../src/camera/privacy.mjs';
 
 const OUT = join('probe-output', new Date().toISOString().replace(/[:.]/g, '-'));
 
@@ -164,8 +165,15 @@ async function main() {
   say(`\nFound: ${cameras.join(', ')}`);
 
   const summary = await cam(['--summary'], 30000);
-  report.phases.summary = summary.stdout;
-  await writeFile(join(OUT, 'summary.txt'), summary.stdout);
+  /*
+   * The body's serial number is in here, and these files get sent to other
+   * people — docs/other-cameras.md asks strangers to run this and hand over
+   * the output. Nothing about a plan needs the serial, so it never gets
+   * written down.
+   */
+  const scrubbed = scrubSummary(summary.stdout);
+  report.phases.summary = scrubbed;
+  await writeFile(join(OUT, 'summary.txt'), scrubbed);
 
   /*
    * 2 — the full setting surface, and how long it costs to read.
@@ -177,7 +185,8 @@ async function main() {
   const t0 = Date.now();
   const all = await cam(['--list-all-config'], 120000);
   const readMs = Date.now() - t0;
-  const baseline = parseConfig(all.stdout);
+  const baseline = scrubConfigs(parseConfig(all.stdout));
+  all.stdout = scrubDump(all.stdout);
   const paths = Object.keys(baseline);
   await writeFile(join(OUT, 'config-baseline.txt'), all.stdout);
   report.phases.config = {
@@ -269,8 +278,8 @@ async function main() {
     const answer = await ask(`  Turn the mode dial to ${mode}, then press Enter (or 's' to skip): `);
     if (answer.trim().toLowerCase() === 's') continue;
     const dump = await cam(['--list-all-config'], 120000);
-    sweeps[mode] = parseConfig(dump.stdout);
-    await writeFile(join(OUT, `config-mode-${mode}.txt`), dump.stdout);
+    sweeps[mode] = scrubConfigs(parseConfig(dump.stdout));
+    await writeFile(join(OUT, `config-mode-${mode}.txt`), scrubDump(dump.stdout));
     say(`    read ${Object.keys(sweeps[mode]).length} settings`);
   }
 
