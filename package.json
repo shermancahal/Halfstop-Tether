@@ -14,7 +14,8 @@
     "android:add": "npx cap add android",
     "doctor": "npx cap doctor",
     "fixture": "node tools/make-fixture.mjs",
-    "web": "node tools/serve.mjs"
+    "web": "node tools/serve.mjs",
+    "build": "node tools/build-dist.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

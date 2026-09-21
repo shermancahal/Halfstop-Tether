@@ -2,16 +2,17 @@
 /*
  * A static server for the browser harness, with no dependencies.
  *
- * It serves the repository root rather than www/, because the harness imports
- * the same src/ modules the app will — there is no build step and no copy that
- * could drift.
+ * It serves www/ as the site root and lends it src/ at the same URL the build
+ * will publish, so a module path is identical here and deployed. Nothing is
+ * rewritten between the two, which is the only way they cannot drift.
  */
 
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join, extname, normalize } from 'node:path';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const REPO = new URL('..', import.meta.url).pathname;
+const ROOT = join(REPO, 'www');
 const PORT = Number(process.env.PORT ?? 8099);
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
@@ -21,8 +22,10 @@ const TYPES = {
 
 createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-  const file = join(ROOT, normalize(path === '/' ? '/www/index.html' : path));
-  if (!file.startsWith(ROOT)) { res.writeHead(403).end('no'); return; }
+  const clean = normalize(path === '/' ? '/index.html' : path);
+  /* /src/... is served from the repository, exactly where the build copies it. */
+  const file = clean.startsWith('/src/') ? join(REPO, clean) : join(ROOT, clean);
+  if (!file.startsWith(ROOT) && !file.startsWith(join(REPO, 'src'))) { res.writeHead(403).end('no'); return; }
   try {
     const body = await readFile(file);
     res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' }).end(body);

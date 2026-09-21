@@ -45,7 +45,8 @@
 
 <main>
   <h1>Halfstop Tether</h1>
-  <p class="sub">A camera in a browser tab, over WebUSB. Chrome or Edge — Safari has no WebUSB.</p>
+  <p class="sub">A camera in a browser tab, over WebUSB. Chrome or Edge — Safari has no WebUSB.<br>
+    Nothing leaves this page: the camera is read in your browser, and a fixture is saved to your own disk.</p>
 
   <div class="row">
     <button id="connect">Connect a camera</button>
@@ -79,9 +80,9 @@
 </main>
 
 <script type="module">
-import { WebUsbTransport, explainUsbError } from '../src/ptp/webusb.mjs';
-import { PtpSession } from '../src/ptp/session.mjs';
-import { OC } from '../src/ptp/codec.mjs';
+import { WebUsbTransport, explainUsbError } from './src/ptp/webusb.mjs';
+import { PtpSession } from './src/ptp/session.mjs';
+import { OC } from './src/ptp/codec.mjs';
 
 const $ = (id) => document.getElementById(id);
 const status = (text, bad = false) => { $('status').textContent = text; $('status').classList.toggle('bad', bad); };

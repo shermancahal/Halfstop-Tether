@@ -1,0 +1,90 @@
+name: Publish to GitHub Pages
+
+# The one thing that publishes https://tether.halfstop.app/
+#
+# WebUSB only works in a secure context, so the deployed site must be HTTPS.
+# localhost is the exception, which is why `npm run web` works without any of
+# this. GitHub Pages issues a certificate for the custom domain on its own.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Pages allows one deployment at a time. Queue rather than cancel, so a run is
+# never discarded halfway through publishing.
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+
+  build:
+    name: Build
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Fails when a module the page imports is not under dist, which is the
+      # difference between a working site and a blank screen with a console
+      # error nobody sees.
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    name: Deploy
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - id: pages
+        uses: actions/deploy-pages@v4
+
+  confirm:
+    name: Confirm what is actually served
+    needs: deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      # A deploy that quietly changed nothing looks exactly like one that
+      # worked. This reads the live site and fails if it is not this commit.
+      - name: Read deployed.txt from the live site
+        run: |
+          sleep 20
+          served=$(curl -fsSL --retry 5 --retry-delay 10 https://tether.halfstop.app/deployed.txt | head -1)
+          echo "live:  $served"
+          echo "built: $GITHUB_SHA"
+          test "$served" = "$GITHUB_SHA"
+
+      - name: The modules the page needs are actually served
+        run: |
+          for path in src/ptp/codec.mjs src/ptp/session.mjs src/ptp/webusb.mjs; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://tether.halfstop.app/$path")
+            echo "$path -> $code"
+            test "$code" = "200"
+          done

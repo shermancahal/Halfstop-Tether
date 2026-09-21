@@ -7,3 +7,4 @@ ios/
 android/
 design/*.html
 !design/*.dc.html
+dist/

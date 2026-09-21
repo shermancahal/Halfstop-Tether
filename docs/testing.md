@@ -83,3 +83,23 @@ faster than either:
 ```bash
 npx serve www            # or any static server
 ```
+
+---
+
+## The browser harness
+
+The only surface that needs nothing from Apple. WebUSB works in Chrome and Edge
+on desktop and on Android; Safari has none, so it will not work there or on any
+iOS browser.
+
+```bash
+sudo launchctl disable system/com.apple.ptpcamerad
+sudo killall ptpcamerad
+npm run web
+```
+
+Then open <http://localhost:8099> in Chrome. WebUSB needs a secure context, and
+localhost counts as one — which is why this works with no certificate.
+
+Deployed, it lives at <https://tether.halfstop.app>. `npm run build` assembles
+`dist/` and refuses to finish if a module the page imports is not in it.
