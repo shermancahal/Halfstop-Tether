@@ -52,8 +52,13 @@ camera derive themselves from what the body reports rather than from a table.
 is exercised by the test suite on machines that have never seen the body —
 `docs/other-cameras.md` explains how to add one.
 
+`src/ptp/` is the protocol: the wire codec, a session that turns transactions
+into answers, and a WebUSB transport. `www/index.html` drives a real camera
+from a browser tab.
+
 ```bash
-npm test
+npm test          # 114 tests, no camera needed
+npm run web       # the harness, then open http://localhost:8099
 ```
 
 `tools/probe.mjs` asks the camera what it can do, because the published sources

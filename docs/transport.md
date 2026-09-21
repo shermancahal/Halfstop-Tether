@@ -86,6 +86,17 @@ iOS does it.
 **Wi-Fi hands both platforms bytes,** because PTP/IP is a plain TCP socket and
 neither platform restricts that.
 
+**A browser hands you bytes too, and that turned out to matter.** WebUSB may
+claim any interface whose class is not on its protected list — audio, video,
+HID, mass storage, smart card, hubs, wireless. Still imaging, class 0x06, is
+not on it, so a web page can drive a camera. Not on iOS, where Safari has no
+WebUSB and every browser is Safari underneath; but Chrome and Edge on the
+desktop, and Chrome on Android, which is one of the two shipping targets.
+
+That makes the browser a fourth shim under the same boundary, and the only one
+that can be exercised today with no developer account, no Xcode and no signing.
+`www/index.html` is that harness.
+
 So the transport layer cannot be *write bytes*. The line has to be drawn one
 level higher, at the transaction:
 

@@ -1,0 +1,93 @@
+/*
+ * PTP over WebUSB.
+ *
+ * Browsers may claim a USB interface unless its class is on WebUSB's protected
+ * list — audio, video, HID, mass storage, smart card, hubs, wireless. Still
+ * imaging, class 0x06, is not on it, which is why a camera can be driven from
+ * a web page at all.
+ *
+ * Not on iOS: Safari has no WebUSB, and every iOS browser is Safari underneath.
+ * Chrome on desktop and on Android, which covers the desk and one of the two
+ * shipping targets.
+ */
+
+export const IMAGE_CLASS = 0x06;
+
+export class WebUsbTransport {
+  constructor(device) {
+    this.device = device;
+    this.endpointIn = null;
+    this.endpointOut = null;
+    this.interfaceNumber = null;
+    /* Cameras answer in chunks of the endpoint's packet size; ask for plenty. */
+    this.readSize = 512 * 1024;
+  }
+
+  /** Ask the viewer to pick a camera. Must be called from a click. */
+  static async request() {
+    if (!navigator.usb) throw new Error('This browser has no WebUSB. Chrome or Edge on desktop or Android.');
+    const device = await navigator.usb.requestDevice({ filters: [{ classCode: IMAGE_CLASS }] });
+    return new WebUsbTransport(device);
+  }
+
+  static async alreadyPaired() {
+    if (!navigator.usb) return [];
+    const devices = await navigator.usb.getDevices();
+    return devices.map((d) => new WebUsbTransport(d));
+  }
+
+  async open() {
+    await this.device.open();
+    if (!this.device.configuration) await this.device.selectConfiguration(1);
+
+    /* Find the still-imaging interface and its bulk endpoints. */
+    for (const iface of this.device.configuration.interfaces) {
+      for (const alt of iface.alternates) {
+        if (alt.interfaceClass !== IMAGE_CLASS) continue;
+        const bulkIn = alt.endpoints.find((e) => e.direction === 'in' && e.type === 'bulk');
+        const bulkOut = alt.endpoints.find((e) => e.direction === 'out' && e.type === 'bulk');
+        if (!bulkIn || !bulkOut) continue;
+        this.interfaceNumber = iface.interfaceNumber;
+        this.endpointIn = bulkIn.endpointNumber;
+        this.endpointOut = bulkOut.endpointNumber;
+      }
+    }
+    if (this.interfaceNumber == null) {
+      throw new Error('No still-imaging interface with bulk endpoints on this device.');
+    }
+    await this.device.claimInterface(this.interfaceNumber);
+    return this;
+  }
+
+  async send(bytes) {
+    const result = await this.device.transferOut(this.endpointOut, bytes);
+    if (result.status !== 'ok') throw new Error(`USB write ${result.status}`);
+  }
+
+  async receive() {
+    const result = await this.device.transferIn(this.endpointIn, this.readSize);
+    if (result.status !== 'ok') throw new Error(`USB read ${result.status}`);
+    return new Uint8Array(result.data.buffer, result.data.byteOffset, result.data.byteLength);
+  }
+
+  async close() {
+    try { if (this.interfaceNumber != null) await this.device.releaseInterface(this.interfaceNumber); } catch { /* already gone */ }
+    try { await this.device.close(); } catch { /* already gone */ }
+  }
+
+  get name() {
+    return [this.device.manufacturerName, this.device.productName].filter(Boolean).join(' ') || 'USB camera';
+  }
+}
+
+/** Why a connection failed, in words rather than a DOMException. */
+export function explainUsbError(error) {
+  const text = String(error?.message ?? error);
+  if (/No device selected/i.test(text)) return 'No camera was chosen.';
+  if (/protected class/i.test(text)) return 'The browser refused this interface as a protected class. That should not happen for a camera — check it is in PTP mode rather than mass storage.';
+  if (/Unable to claim|access denied|SecurityError/i.test(text)) {
+    return 'Something else is holding the camera. On macOS that is ptpcamerad: run "sudo launchctl disable system/com.apple.ptpcamerad" then "sudo killall ptpcamerad" and reconnect. On Linux, stop gvfs-gphoto2-volume-monitor.';
+  }
+  if (/no WebUSB/i.test(text)) return text;
+  return text;
+}
