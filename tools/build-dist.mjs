@@ -29,16 +29,22 @@ await writeFile(join(DIST, 'deployed.txt'),
   `${process.env.GITHUB_SHA ?? 'local'}\n${new Date().toISOString()}\n`);
 
 /*
- * Every module the page imports has to exist under dist, or the site is a
- * blank screen with a console error. Check rather than hope.
+ * Every module every page imports has to exist under dist, or that page is a
+ * blank screen with a console error nobody sees. Check all of them — checking
+ * only index.html once let the harness go unverified.
  */
-const html = await readFile(join(DIST, 'index.html'), 'utf8');
-const imports = [...html.matchAll(/from\s+['"](\.[^'"]+)['"]/g)].map((m) => m[1]);
+const pages = (await readdir(DIST)).filter((name) => name.endsWith('.html'));
 const missing = [];
-for (const spec of imports) {
-  const resolved = join(DIST, spec.replace(/^\.\//, ''));
-  if (!resolved.startsWith(DIST)) { missing.push(`${spec} escapes the site root`); continue; }
-  try { await readFile(resolved); } catch { missing.push(`${spec} is not in dist`); }
+let imports = [];
+for (const page of pages) {
+  const html = await readFile(join(DIST, page), 'utf8');
+  const specs = [...html.matchAll(/from\s+['"](\.[^'"]+)['"]/g)].map((m) => m[1]);
+  imports = imports.concat(specs);
+  for (const spec of specs) {
+    const resolved = join(DIST, spec.replace(/^\.\//, ''));
+    if (!resolved.startsWith(DIST)) { missing.push(`${page}: ${spec} escapes the site root`); continue; }
+    try { await readFile(resolved); } catch { missing.push(`${page}: ${spec} is not in dist`); }
+  }
 }
 if (missing.length) {
   console.error('dist would not load in a browser:');
@@ -46,5 +52,4 @@ if (missing.length) {
   process.exit(1);
 }
 
-const files = await readdir(DIST);
-console.log(`dist/ — ${DOMAIN}, ${files.length} entries at the root, ${imports.length} modules checked`);
+console.log(`dist/ — ${DOMAIN}, ${pages.length} page${pages.length > 1 ? 's' : ''}, ${imports.length} module imports checked`);

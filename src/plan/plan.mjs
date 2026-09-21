@@ -40,14 +40,30 @@ export function modesThatAllow({ pins, writableByMode }) {
   return modes.filter((mode) => pins.every((axis) => writableByMode[mode]?.includes(axis)));
 }
 
-/** The reality check the control screen shows: can the app set this, or must you? */
+/**
+ * The reality check the control screen shows: can the app set this, or must you?
+ *
+ * Asked of the mode the camera is in, not of the map as a whole. A connected
+ * body can only report where its dial is now, so a map with one entry is the
+ * normal runtime case — and an intent it cannot satisfy there is exactly when
+ * this has to speak, rather than the case to stay quiet about.
+ */
 export function modeCheck({ plan, camera, pins }) {
-  const allowed = modesThatAllow({ pins, writableByMode: camera.writableByMode ?? {} });
-  if (!allowed.length || allowed.includes(camera.mode)) return plan;
+  const map = camera.writableByMode ?? {};
+  if (!Object.keys(map).length) return plan;      /* nothing known; do not invent */
+
+  const here = map[camera.mode] ?? [];
+  const missing = pins.filter((axis) => !here.includes(axis));
+  if (!missing.length) return plan;
+
+  /* Somewhere else on the dial that would work, if we happen to know the map. */
+  const elsewhere = modesThatAllow({ pins, writableByMode: map }).filter((m) => m !== camera.mode);
   return plan.check({
     kind: 'mode-dial',
-    says: `The mode dial is on ${camera.mode}. This plan sets ${pins.join(' and ')}, which ${allowed.join(' or ')} allows.`,
-    fix: `Turn it to ${allowed[0]} — that one is not mine to set.`,
+    says: `The mode dial is on ${camera.mode}, where the camera sets ${missing.join(' and ')} itself.`,
+    fix: elsewhere.length
+      ? `Turn it to ${elsewhere[0]} — that one is not mine to set.`
+      : 'Turn it to M. That one is not mine to set.',
     appCanFix: false,
   });
 }

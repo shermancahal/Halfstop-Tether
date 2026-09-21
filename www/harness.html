@@ -1,0 +1,193 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Halfstop Tether — developer harness</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --paper: #15120f; --surface: #1d1917; --line: #362f2a; --line-strong: #4a423b;
+    --ink: #f2ece3; --ink-2: #b8ada0; --ink-3: #8a8078;
+    --clay: #e2734a; --pine: #6fae87; --warn: #d7a55c; --sky: #6aaed6;
+    --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    padding: 40px 20px 80px;
+  }
+  main { max-width: 900px; margin: 0 auto; }
+  h1 { font-family: var(--serif); font-size: 28px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 4px; }
+  .sub { color: var(--ink-3); font-size: 13.5px; margin: 0 0 28px; }
+  h2 { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3); margin: 32px 0 10px; }
+  button {
+    font: inherit; font-weight: 650; min-height: 44px; padding: 0 18px; border-radius: 9px;
+    background: var(--clay); color: #1c1815; border: 0; cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--line-strong); }
+  button:disabled { opacity: .4; cursor: default; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .kv { display: grid; grid-template-columns: 160px 1fr; gap: 8px 14px; font-size: 13.5px; }
+  .kv dt { color: var(--ink-3); font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; padding-top: 2px; }
+  .kv dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .big { font-family: var(--serif); font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: top; }
+  .w { color: var(--pine); } .ro { color: var(--ink-3); } .err { color: var(--warn); }
+  .scroll { max-height: 460px; overflow: auto; border: 1px solid var(--line); border-radius: 9px; }
+  #status { margin: 18px 0; font-size: 13.5px; color: var(--ink-2); min-height: 20px; }
+  #status.bad { color: var(--warn); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--ink-2); }
+  .note { font-size: 12.5px; line-height: 1.5; color: var(--ink-3); margin-top: 10px; }
+</style>
+
+<main>
+  <h1>Developer harness</h1>
+  <p class="sub"><a href="./">&larr; the app</a> &nbsp;·&nbsp; A camera in a browser tab, over WebUSB. Chrome or Edge — Safari has no WebUSB.<br>
+    Nothing leaves this page: the camera is read in your browser, and a fixture is saved to your own disk.</p>
+
+  <div class="row">
+    <button id="connect">Connect a camera</button>
+    <button id="readAll" class="ghost" disabled>Read every property</button>
+    <button id="export" class="ghost" disabled>Save as fixture</button>
+    <button id="disconnect" class="ghost" disabled>Disconnect</button>
+  </div>
+  <p id="status"></p>
+
+  <section id="info" hidden>
+    <h2>What it says it is</h2>
+    <div class="card"><dl class="kv" id="infoList"></dl></div>
+  </section>
+
+  <section id="timing" hidden>
+    <h2>How long a full read costs</h2>
+    <div class="card">
+      <div class="big" id="elapsed">—</div>
+      <p class="note">The budget the tiered poll has to live inside. gphoto2 could not measure this: it reopened the camera on every call, so its 3069&nbsp;ms was mostly process startup.</p>
+    </div>
+  </section>
+
+  <section id="props" hidden>
+    <h2>Properties <span id="propCount" class="ro"></span></h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Code</th><th>Set by</th><th>Current</th><th>Form</th><th>Legal values</th></tr></thead>
+      <tbody id="propRows"></tbody>
+    </table></div>
+    <p class="note">“Set by” is the descriptor’s own getSet flag. Turn the mode dial and read again: on the Z5 ten of these change hands.</p>
+  </section>
+</main>
+
+<script type="module">
+import { WebUsbTransport, explainUsbError } from './src/ptp/webusb.mjs';
+import { PtpSession } from './src/ptp/session.mjs';
+import { OC } from './src/ptp/codec.mjs';
+
+const $ = (id) => document.getElementById(id);
+const status = (text, bad = false) => { $('status').textContent = text; $('status').classList.toggle('bad', bad); };
+
+let transport = null, session = null, lastRead = null;
+
+function show(id, on = true) { $(id).hidden = !on; }
+function setBusy(on) {
+  for (const id of ['connect', 'readAll', 'export', 'disconnect']) $(id).disabled = on;
+  if (!on) {
+    $('connect').disabled = !!session;
+    $('readAll').disabled = !session;
+    $('export').disabled = !lastRead;
+    $('disconnect').disabled = !session;
+  }
+}
+
+$('connect').onclick = async () => {
+  setBusy(true);
+  try {
+    status('Waiting for you to pick a camera…');
+    transport = await WebUsbTransport.request();
+    await transport.open();
+    session = new PtpSession(transport);
+    const info = await session.open();
+
+    const rows = {
+      Manufacturer: info.manufacturer, Model: info.model,
+      Firmware: info.deviceVersion, Serial: info.serialNumber,
+      'Vendor extension': info.vendorExtensionDesc || `0x${info.vendorExtensionId.toString(16)}`,
+      Operations: `${info.operations.length} claimed`,
+      Properties: `${info.deviceProperties.length} listed`,
+      'Live view': info.operations.includes(OC.NikonStartLiveView) ? 'claimed' : 'not claimed',
+      'Manual focus drive': info.operations.includes(OC.NikonMfDrive) ? 'claimed' : 'not claimed',
+    };
+    $('infoList').innerHTML = Object.entries(rows)
+      .map(([k, v]) => `<dt>${k}</dt><dd>${v ?? '—'}</dd>`).join('');
+    show('info');
+    status(`Connected to ${info.manufacturer} ${info.model}. Claimed is not the same as implemented — read the properties to find out.`);
+  } catch (error) {
+    status(explainUsbError(error), true);
+    session = null; transport = null;
+  }
+  setBusy(false);
+};
+
+$('readAll').onclick = async () => {
+  setBusy(true);
+  try {
+    const { props, elapsedMs } = await session.readAllProps({
+      onProgress: (done, total) => status(`Reading ${done} of ${total}…`),
+    });
+    lastRead = { props, elapsedMs, info: session.deviceInfo };
+
+    $('elapsed').textContent = `${elapsedMs} ms`;
+    show('timing');
+
+    const entries = Object.entries(props);
+    const refused = entries.filter(([, p]) => p.error).length;
+    $('propCount').textContent = `${entries.length} read${refused ? `, ${refused} claimed but refused` : ''}`;
+    $('propRows').innerHTML = entries.map(([code, p]) => {
+      const hex = `0x${Number(code).toString(16).padStart(4, '0')}`;
+      if (p.error) return `<tr><td><code>${hex}</code></td><td class="err">refused</td><td class="err" colspan="3">${p.error}</td></tr>`;
+      const values = p.form === 'enum' ? `${p.values.length}: ${p.values.slice(0, 6).join(', ')}${p.values.length > 6 ? ' …' : ''}`
+        : p.form === 'range' ? `${p.range.min} to ${p.range.max} step ${p.range.step}` : '—';
+      return `<tr><td><code>${hex}</code></td>`
+        + `<td class="${p.writable ? 'w' : 'ro'}">${p.writable ? 'the app' : 'the camera'}</td>`
+        + `<td>${String(p.current).slice(0, 28)}</td><td class="ro">${p.form}</td><td class="ro">${values}</td></tr>`;
+    }).join('');
+    show('props');
+    status(`${entries.length} properties in ${elapsedMs} ms${refused ? `. ${refused} were claimed and then refused — worth knowing.` : '.'}`);
+  } catch (error) {
+    status(explainUsbError(error), true);
+  }
+  setBusy(false);
+};
+
+$('export').onclick = () => {
+  const { props, elapsedMs, info } = lastRead;
+  const fixture = {
+    fixtureVersion: 1,
+    camera: { manufacturer: info.manufacturer, model: info.model, firmware: info.deviceVersion },
+    capturedAt: new Date().toISOString(),
+    capturedWith: 'browser harness over WebUSB',
+    fullReadMs: elapsedMs,
+    operations: info.operations,
+    properties: Object.fromEntries(Object.entries(props).map(([code, p]) => [code, p])),
+  };
+  const blob = new URL(URL.createObjectURL(new Blob([JSON.stringify(fixture, null, 2)], { type: 'application/json' })));
+  const a = document.createElement('a');
+  a.href = blob; a.download = `${info.model.replace(/\s+/g, '-').toLowerCase()}-webusb.json`;
+  a.click();
+  status('Saved. Send that file and this camera joins the test suite.');
+};
+
+$('disconnect').onclick = async () => {
+  setBusy(true);
+  try { await session?.close(); await transport?.close(); } catch { /* it is going away anyway */ }
+  session = null; transport = null; lastRead = null;
+  for (const id of ['info', 'timing', 'props']) show(id, false);
+  status('Disconnected.');
+  setBusy(false);
+};
+
+status(navigator.usb
+  ? 'Ready. Plug the camera in, switch it on, and press Connect.'
+  : 'This browser has no WebUSB. Use Chrome or Edge on desktop or Android — Safari does not support it.');
+</script>
