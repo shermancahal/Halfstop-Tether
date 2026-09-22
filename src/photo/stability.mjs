@@ -35,7 +35,7 @@ export function stabilityAdvice({ shutterS, focalLength, stabilisationStops = 0,
       kind: 'vr-on-tripod',
       says: 'Stabilisation is on and the camera is on a tripod, where it can cause the blur it exists to prevent.',
       fix: 'Turn it off for this run and put it back afterwards.',
-      appCanFix: true,
+      appCanFix: true, severity: 'warn',
     });
   }
 
@@ -49,7 +49,7 @@ export function stabilityAdvice({ shutterS, focalLength, stabilisationStops = 0,
       kind: 'shutter-shock',
       says: 'This is the shutter-speed range where the shutter can shake the frame.',
       fix: 'Use the electronic first curtain, or an exposure delay of a couple of seconds.',
-      appCanFix: true,
+      appCanFix: true, severity: 'warn',
     });
   }
 

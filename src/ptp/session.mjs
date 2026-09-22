@@ -13,7 +13,7 @@
 
 import {
   encodeCommand, encodeData, decodeContainer, parseDeviceInfo, parseDevicePropDesc,
-  CONTAINER, RESPONSE_OK, OC, describeResponse,
+  CONTAINER, RESPONSE_OK, OC, describeResponse, describeOpcode,
 } from './codec.mjs';
 
 export class PtpError extends Error {
@@ -41,7 +41,7 @@ export class PtpSession {
    * One transaction: command out, optional data either way, response back.
    * Everything the app does to a camera goes through here.
    */
-  async transaction({ opcode, params = [], dataOut = null, expectData = false }) {
+  async transaction({ opcode, params = [], dataOut = null, expectData = false, timeoutMs = null }) {
     /*
      * The boundary docs/transport.md drew, now load-bearing. Android and
      * WebUSB hand over bytes and we frame them; ImageCaptureCore takes a
@@ -50,11 +50,20 @@ export class PtpSession {
      * identical either way.
      */
     if (this.transport.transact) {
-      const result = await this.transport.transact({ opcode, params, dataOut });
+      /*
+       * `timeoutMs` is how long this particular command deserves. Most want
+       * the transport's default; a capture holding a thirty-second exposure
+       * open wants thirty seconds and change, and saying so beats raising the
+       * default for everything and losing the fast failure that tells you the
+       * body is asleep. The byte-level path ignores it — a USB read has its
+       * own clock.
+       */
+      const result = await this.transport.transact(
+        timeoutMs == null ? { opcode, params, dataOut } : { opcode, params, dataOut, timeoutMs });
       if (result.responseCode !== RESPONSE_OK) {
-        throw new PtpError(result.responseCode, `opcode 0x${opcode.toString(16)}`);
+        throw new PtpError(result.responseCode, describeOpcode(opcode));
       }
-      if (expectData && !result.data) throw new Error(`No data came back from 0x${opcode.toString(16)}`);
+      if (expectData && !result.data) throw new Error(`No data came back from ${describeOpcode(opcode)}`);
       return { data: result.data ?? null, params: result.params ?? [] };
     }
 
@@ -79,9 +88,9 @@ export class PtpSession {
       throw new Error(`Expected a response, got container type ${container.type}`);
     }
     if (container.code !== RESPONSE_OK) {
-      throw new PtpError(container.code, `opcode 0x${opcode.toString(16)}`);
+      throw new PtpError(container.code, describeOpcode(opcode));
     }
-    if (expectData && !data) throw new Error(`No data came back from 0x${opcode.toString(16)}`);
+    if (expectData && !data) throw new Error(`No data came back from ${describeOpcode(opcode)}`);
     return { data, params: container.params };
   }
 

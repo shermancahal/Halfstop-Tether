@@ -47,8 +47,18 @@ export function snap(value, legal) {
   return { value: best, exact: best === value, offBy: stopsBetween(value, best) };
 }
 
-/** A shutter time as a photographer writes it: 1/250, 2.5s, 30s. */
+/**
+ * A shutter time as a photographer writes it: 1/250, 1/1.3, 2.5s, 30s.
+ *
+ * The decimal on the fast side is not decoration. Between one second and a
+ * half, the real stops are 1/1.3 and 1/1.6, and rounding the reciprocal to a
+ * whole number turned 0.77s into "1/1" — a reading that exists on no camera.
+ * Under a tenth of a second the denominators are far enough apart that whole
+ * numbers are what the body itself shows.
+ */
 export function formatShutter(seconds) {
+  if (seconds == null || !Number.isFinite(seconds)) return '—';
   if (seconds >= 1) return `${Number(seconds.toFixed(seconds < 10 ? 1 : 0))}s`;
-  return `1/${Math.round(1 / seconds)}`;
+  const denominator = 1 / seconds;
+  return `1/${Number(denominator.toFixed(denominator < 10 ? 1 : 0))}`;
 }

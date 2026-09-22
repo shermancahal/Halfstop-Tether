@@ -195,3 +195,16 @@ export const RESPONSE_NAMES = {
 export function describeResponse(code) {
   return RESPONSE_NAMES[code] ?? `Unknown response 0x${code.toString(16)}`;
 }
+
+/*
+ * The name of an operation, for anything a person will read. "opcode 0x1001"
+ * is a fact about the protocol and tells a photographer nothing; the map is
+ * already here, so use it in both directions.
+ */
+const OPCODE_NAMES = Object.fromEntries(Object.entries(OC).map(([name, code]) => [code, name]));
+
+export function describeOpcode(code) {
+  const name = OPCODE_NAMES[code];
+  const hex = `0x${code.toString(16)}`;
+  return name ? `${name} (${hex})` : `opcode ${hex}`;
+}

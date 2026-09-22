@@ -39,6 +39,15 @@
   .camera-lens.assumed { color: var(--warn); }
   #cameraNotes { margin: 12px 0 0; padding-left: 18px; font-size: 12.5px; line-height: 1.5; color: var(--warn); }
 
+  .raw { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .raw summary { font-size: 11.5px; color: var(--ink-3); cursor: pointer; }
+  .raw table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px;
+               font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .raw th { text-align: left; color: var(--ink-3); font-weight: 600; padding: 3px 6px 3px 0; }
+  .raw td { padding: 3px 6px 3px 0; color: var(--ink-2); border-top: 1px solid var(--line); }
+  .raw td.num { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .raw tr.gone td { color: var(--ink-3); }
+
   #choices { display: flex; flex-direction: column; gap: 7px; }
   .choice {
     display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
@@ -48,6 +57,42 @@
   .choice-title { font-size: 14.5px; font-weight: 600; }
   .choice-says { font-size: 11.5px; color: var(--ink-3); }
 
+  /* The two readouts. Current on top, ideal under it, one column per axis. */
+  .grid {
+    display: grid; grid-template-columns: 62px repeat(3, 1fr);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden; margin-top: 14px;
+  }
+  .g-corner { background: var(--raised); }
+  .g-head {
+    background: var(--raised); font-size: 10px; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-3); padding: 9px 10px; text-align: center;
+  }
+  .g-label {
+    font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--ink-3); padding: 14px 8px; display: flex; align-items: center;
+    border-top: 1px solid var(--line);
+  }
+  .g-cell {
+    font-family: var(--serif); font-size: 21px; line-height: 1.1; text-align: center;
+    padding: 12px 6px; border-top: 1px solid var(--line); border-left: 1px solid var(--line);
+    font-variant-numeric: tabular-nums; color: var(--ink-2);
+  }
+  .g-cell.ideal { color: var(--ink); background: #1a1714; }
+  .g-cell.ideal.none { color: var(--ink-3); }
+  .g-cell.matched { color: var(--pine); }
+  .g-who {
+    display: block; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 9.5px;
+    font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px;
+  }
+
+  .why { display: flex; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
+  .why-axis {
+    width: 62px; flex: none; font-size: 10px; font-weight: 700; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--ink-3); padding-top: 2px;
+  }
+  .why-text { font-size: 12px; line-height: 1.5; color: var(--ink-2); }
+
   .row { display: flex; gap: 14px; align-items: baseline; padding: 14px 2px; border-bottom: 1px solid var(--line); }
   .row-label { width: 78px; flex: none; font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
   .row-value { font-family: var(--serif); font-size: 25px; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -56,7 +101,9 @@
   .check { display: flex; flex-direction: column; gap: 3px; padding: 14px; border-radius: 9px; margin-bottom: 9px; }
   .check.yours { background: #33261c; border: 1px solid #6b4630; }
   .check.mine { background: #1a2822; border: 1px solid #2e4a3a; }
-  .check.warn { background: var(--raised); border: 1px solid var(--line-strong); }
+  /* Yellow is the third kind: nobody has to act, but you should know. */
+  .check.warn { background: #322715; border: 1px solid #6d5526; }
+  .check.warn .check-says { color: var(--warn); }
   .check-says { font-size: 13.5px; font-weight: 600; }
   .check-fix { font-size: 12px; line-height: 1.45; color: var(--ink-2); }
   #planReady { font-size: 13px; color: var(--pine); margin: 16px 0 0; }
@@ -80,6 +127,9 @@
       <div class="camera-now" id="cameraNow"></div>
       <div class="camera-lens" id="cameraLens"></div>
       <ul id="cameraNotes" hidden></ul>
+      <details class="raw"><summary>What the camera actually said</summary>
+        <div id="cameraRawBody"></div>
+      </details>
     </div>
     <h2>What are you shooting?</h2>
     <div id="choices"></div>
@@ -89,7 +139,8 @@
   <section id="planScreen" hidden>
     <h2 id="planWhere"></h2>
     <h1 id="planTitle" style="font-size:26px"></h1>
-    <div id="planRows" style="margin-top:14px"></div>
+    <div id="planGrid" class="grid"></div>
+    <div id="planRows" style="margin-top:16px"></div>
     <h2 id="planFiltersHead" hidden>Filters</h2>
     <div id="planFilters"></div>
     <h2 id="planChecksHead" hidden>Before you start</h2>
@@ -107,10 +158,29 @@ import { describeConnectionFailure, transportKind } from './src/ptp/connect.mjs'
 import { usbDiagnostics } from './src/ptp/webusb.mjs';
 
 const app = new App();
+let showing = null;          /* the intent on screen, so a dial move can redraw it */
 
 const screen = (name) => {
+  showing = name === 'planScreen' ? showing : null;
   for (const id of ['connectScreen', 'cameraScreen', 'planScreen']) show(id, id === name);
 };
+
+/*
+ * The camera is the source of truth and it keeps changing. Every re-read that
+ * moved something lands here: the header always, and the plan too when one is
+ * open — turning the dial to M changes which settings are the app's to set, so
+ * the plan it produces is a different plan.
+ */
+function redraw(error) {
+  if (error) {
+    app.status(error.message, true);
+    return;
+  }
+  renderCamera(app, app.info);
+  if (showing) {
+    try { renderPlan(app.plan(showing), app.camera); } catch (e) { app.status(e.message, true); }
+  }
+}
 
 el('connect').onclick = async () => {
   el('connect').disabled = true;
@@ -120,6 +190,7 @@ el('connect').onclick = async () => {
     renderChoices(pick);
     screen('cameraScreen');
     app.status(`Connected. ${app.camera.writableByMode[app.camera.mode].length} of three exposure settings are mine to set in ${app.camera.mode}.`);
+    app.watch(redraw);
   } catch (error) {
     const seen = usbDiagnostics(app.transport?.device);
     app.status(describeConnectionFailure(error) + (seen ? `\n\nThe device, as the browser sees it:\n${JSON.stringify(seen, null, 2)}` : ''), true);
@@ -131,6 +202,7 @@ function pick(intentId) {
   try {
     const plan = app.plan(intentId);
     renderPlan(plan, app.camera);
+    showing = intentId;
     screen('planScreen');
     app.status('');
   } catch (error) {

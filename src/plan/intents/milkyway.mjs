@@ -5,7 +5,8 @@
  * may be the wrong night and no exposure triangle fixes that.
  */
 
-import { npfLimit } from '../../photo/motion.mjs';
+import { npfLimit, rule500 } from '../../photo/motion.mjs';
+import { formatShutter } from '../../photo/units.mjs';
 import { solveExposure, SCENE_EV } from '../../photo/exposure.mjs';
 import { stabilityAdvice } from '../../photo/stability.mjs';
 import { makePlan, modeCheck, foldExposureNotes } from '../plan.mjs';
@@ -36,7 +37,9 @@ export const milkyWay = {
       pixelPitchUm: camera.pixelPitchUm, declinationDeg,
     });
     p.set('shutter', shutter,
-      `NPF limit at ${lens.focalLength}mm, f/${lens.maxAperture}, ${camera.widthPx}px across — the 500 rule would have said ${Math.round(500 / lens.focalLength)}s and trailed`);
+      `The longest the stars stay points at ${lens.focalLength}mm on a ${camera.widthPx}px sensor. `
+      + `That is the NPF limit, which counts the pixels the stars land on; the old 500 rule would `
+      + `have allowed ${formatShutter(rule500({ focalLength: lens.focalLength }))} and trailed them.`);
     p.set('aperture', lens.maxAperture, 'Wide open; there is no light to spare');
 
     const evScene = SKY_EV[site.bortle ?? 4] ?? SCENE_EV['moonless milky way'];

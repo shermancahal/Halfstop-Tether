@@ -11,7 +11,7 @@
  * one language and keeps the Swift small enough to be obviously correct.
  */
 
-import { encodeCommand, decodeContainer, CONTAINER } from './codec.mjs';
+import { encodeCommand, decodeContainer, describeOpcode, CONTAINER } from './codec.mjs';
 
 const toBase64 = (bytes) => btoa(String.fromCharCode(...bytes));
 const fromBase64 = (text) => {
@@ -27,6 +27,21 @@ export function hasNativeBridge() {
   return typeof window !== 'undefined' && Boolean(window.webkit?.messageHandlers?.ptp);
 }
 
+/*
+ * How long to wait before deciding nothing is coming back.
+ *
+ * A camera that is awake answers GetDeviceInfo in milliseconds. A camera that
+ * has gone to sleep does not answer at all — no error, no refusal, silence —
+ * so the only way to notice is to stop waiting. Thirty seconds of that, ending
+ * in the word "opcode", is the worst possible way to be told the body needs a
+ * nudge. Eight is long enough to be sure and short enough to act on.
+ *
+ * A capture is the exception: a thirty-second exposure legitimately takes
+ * thirty seconds, so whoever asks for one says how long to allow.
+ */
+const OPEN_TIMEOUT_MS = 8000;
+const DEFAULT_TIMEOUT_MS = 8000;
+
 export class NativeTransport {
   /* ImageCaptureCore opens and closes the PTP session itself. */
   managesSession = true;
@@ -36,6 +51,8 @@ export class NativeTransport {
     this.nextId = 1;
     this.transactionId = 0;
     this.events = [];
+    /* Set once something stops answering; see #post. */
+    this.stalled = null;
 
     /* The host calls these. One reply channel, one event channel. */
     window.__ptpReply = (id, result) => {
@@ -50,30 +67,50 @@ export class NativeTransport {
     };
   }
 
-  #post(message, describe = message.kind) {
+  #post(message, { describe = message.kind, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+    /*
+     * Once one command has gone unanswered the camera is not going to answer
+     * the next one either, and waiting out the timeout again per call turns a
+     * wedged session into minutes of spinner. Say it once, immediately, for as
+     * long as the session lasts.
+     */
+    if (this.stalled) return Promise.reject(new Error(this.stalled));
+
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
       window.webkit.messageHandlers.ptp.postMessage({ ...message, id });
-      /* A native side that never answers should not hang the interface. */
       setTimeout(() => {
-        if (this.pending.delete(id)) reject(new Error(`The camera did not answer ${describe} within 30 seconds`));
-      }, 30000);
+        if (!this.pending.delete(id)) return;
+        this.stalled = `The camera stopped answering — ${describe} went out and nothing came back.\n\n`
+          + 'A body that has gone to sleep does exactly this: no error, no refusal, silence. '
+          + 'Wake it (half-press the shutter, or turn any dial), then connect again.';
+        reject(new Error(this.stalled));
+      }, timeoutMs);
     });
   }
 
-  async open() { await this.#post({ kind: 'open' }); return this; }
-  async close() { try { await this.#post({ kind: 'close' }); } catch { /* going away */ } }
+  async open() {
+    await this.#post({ kind: 'open' }, { describe: 'the request to open a session', timeoutMs: OPEN_TIMEOUT_MS });
+    return this;
+  }
+
+  async close() {
+    /* Closing is how a stall gets cleared, so it is the one thing a stall
+     * must not block. */
+    this.stalled = null;
+    try { await this.#post({ kind: 'close' }); } catch { /* going away */ }
+  }
 
   /** One transaction, framed here and passed across as bytes. */
-  async transact({ opcode, params = [], dataOut = null }) {
+  async transact({ opcode, params = [], dataOut = null, timeoutMs = DEFAULT_TIMEOUT_MS }) {
     this.transactionId = (this.transactionId % 0xfffffffe) + 1;
     const command = encodeCommand({ opcode, transactionId: this.transactionId, params });
     const reply = await this.#post({
       kind: 'transact',
       command: toBase64(command),
       outData: dataOut ? toBase64(dataOut) : null,
-    }, `opcode 0x${opcode.toString(16)}`);
+    }, { describe: describeOpcode(opcode), timeoutMs });
 
     const responseBytes = fromBase64(reply.response);
     const container = responseBytes ? decodeContainer(responseBytes) : null;
