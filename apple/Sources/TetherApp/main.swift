@@ -60,7 +60,17 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
     /// The whole of this bridge: bytes in, bytes out, no interpretation.
     func transact(command: Data, outData: Data?, done: @escaping (Data?, Data?, String?) -> Void) {
         guard let camera, sessionOpen else { done(nil, nil, "No session is open."); return }
-        camera.requestSendPTPCommand(command, outData: outData) { response, payload, error in
+        /*
+         * The completion hands back (payload, responseContainer, error).
+         *
+         * Read off the probe rather than the documentation: the parameter that
+         * decoded as twelve bytes of type 3, code 0x2001 was the SECOND one, and the
+         * 519 bytes of DeviceInfo were the first. I called it the other way round
+         * once and the runtime said "expected a response container, got type 65535" —
+         * which is DeviceInfo's 0xffffffff vendor extension field being read as a
+         * container header.
+         */
+        camera.requestSendPTPCommand(command, outData: outData) { payload, response, error in
             if let error = error as NSError? {
                 let hint = error.code == -21249 ? " (PTPNotAuthorizedToSendCommand)" : ""
                 done(nil, nil, "\(error.localizedDescription)\(hint)")

@@ -142,7 +142,7 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
         let command = PTP.command(PTP.getDeviceInfo)
         say("  command bytes  \(command.hexPreview())")
 
-        camera.requestSendPTPCommand(command, outData: nil) { [weak self] ptpResponse, payload, error in
+        camera.requestSendPTPCommand(command, outData: nil) { [weak self] payload, ptpResponse, error in
             guard let self else { return }
             self.report(label: "GetDeviceInfo", ptpResponse: ptpResponse, payload: payload, error: error)
             if error == nil { self.sendPropDesc(PTP.exposureProgramMode, named: "ExposureProgramMode") }
@@ -155,7 +155,7 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
         let command = PTP.command(PTP.getDevicePropDesc, transaction: 1, params: [code])
         say("\nSending GetDevicePropDesc for \(named) (0x\(String(code, radix: 16)))…")
 
-        camera.requestSendPTPCommand(command, outData: nil) { [weak self] ptpResponse, payload, error in
+        camera.requestSendPTPCommand(command, outData: nil) { [weak self] payload, ptpResponse, error in
             guard let self else { return }
             self.report(label: named, ptpResponse: ptpResponse, payload: payload, error: error)
             if code == PTP.exposureProgramMode {
@@ -169,11 +169,16 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
     }
 
     /// Print everything, because the shape of what comes back is the point.
-    /*
-     * The first parameter is the PTP response container and the second is the
-     * data payload — the reverse of what the names suggested. Proven by the
-     * first decoding as twelve bytes of type 3, code 0x2001, OK.
-     */
+/*
+ * The completion hands back (payload, responseContainer, error).
+ *
+ * Read off the probe rather than the documentation: the parameter that
+ * decoded as twelve bytes of type 3, code 0x2001 was the SECOND one, and the
+ * 519 bytes of DeviceInfo were the first. I called it the other way round
+ * once and the runtime said "expected a response container, got type 65535" —
+ * which is DeviceInfo's 0xffffffff vendor extension field being read as a
+ * container header.
+ */
     private func report(label: String, ptpResponse: Data?, payload: Data?, error: (any Error)?) {
         say("  [\(label)]")
         if let error = error as NSError? {
