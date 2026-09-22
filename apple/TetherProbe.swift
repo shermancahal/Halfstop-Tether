@@ -94,7 +94,7 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
         browser.stop()
     }
 
-    private func say(_ text: String) { print(text); fflush(stdout) }
+    func say(_ text: String) { print(text); fflush(stdout) }
 
     // MARK: Finding it
 
@@ -109,15 +109,13 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
 
         // The gate on everything below. Apple documents that every PTP camera
         // has it, so if it is missing that is the finding.
-        let canSendPTP = camera.capabilities.contains {
-            "\($0)".contains("PTP") || "\($0)" == ICCameraDeviceCanAcceptPTPCommands
-        }
+        let canSendPTP = camera.capabilities.contains(ICCameraDeviceCanAcceptPTPCommands)
         say("  accepts PTP    \(canSendPTP ? "yes" : "NO — the rest of this will not work")")
 
         camera.requestOpenSession()
     }
 
-    func deviceBrowser(_ browser: ICDeviceBrowser, didRemove device: ICDevice, moreComing: Bool) {}
+    func deviceBrowser(_ browser: ICDeviceBrowser, didRemove device: ICDevice, moreGoing: Bool) {}
 
     // MARK: Talking to it
 
@@ -214,11 +212,21 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
         say("              (if that reads as a camera, the payload is raw PTP)")
     }
 
+    // MARK: The event stream, which turns out to be free
+
+    /// Apple requires this, which means it hands over raw PTP events — the
+    /// same 0x90C7-shaped notifications the mirroring design needs to know a
+    /// hand has moved a dial. Worth seeing what arrives unprompted.
+    func cameraDevice(_ camera: ICCameraDevice, didReceivePTPEvent eventData: Data) {
+        say("  [event] \(eventData.hexPreview(24))")
+    }
+
     // MARK: Required stubs
 
     func didRemove(_ device: ICDevice) {}
     func cameraDevice(_ camera: ICCameraDevice, didAdd items: [ICCameraItem]) {}
     func cameraDevice(_ camera: ICCameraDevice, didRemove items: [ICCameraItem]) {}
+    func cameraDevice(_ camera: ICCameraDevice, didRenameItems items: [ICCameraItem]) {}
     func cameraDeviceDidChangeCapability(_ camera: ICCameraDevice) {}
     func cameraDevice(_ camera: ICCameraDevice, didReceiveThumbnail thumbnail: CGImage?,
                       for item: ICCameraItem, error: (any Error)?) {}
@@ -227,6 +235,7 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
     func cameraDeviceDidEnableAccessRestriction(_ device: ICDevice) {}
     func cameraDeviceDidRemoveAccessRestriction(_ device: ICDevice) {}
     func deviceDidBecomeReady(_ device: ICDevice) {}
+    func deviceDidBecomeReady(withCompleteContentCatalog device: ICCameraDevice) {}
     func device(_ device: ICDevice, didCloseSessionWithError error: (any Error)?) {}
 }
 
