@@ -109,7 +109,15 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
 
         // The gate on everything below. Apple documents that every PTP camera
         // has it, so if it is missing that is the finding.
-        let canSendPTP = camera.capabilities.contains(ICCameraDeviceCanAcceptPTPCommands)
+        /*
+         * capabilities is an array of String while the constant is an
+         * ICDeviceCapability, so they cannot be compared directly and the
+         * bridging differs by SDK. Matching the printed form sidesteps both:
+         * the capability is spelled ICCameraDeviceCanAcceptPTPCommands, and
+         * the full list is printed above anyway, so a wrong guess here is
+         * visible rather than silent.
+         */
+        let canSendPTP = camera.capabilities.contains { "\($0)".contains("PTP") }
         say("  accepts PTP    \(canSendPTP ? "yes" : "NO — the rest of this will not work")")
 
         camera.requestOpenSession()
