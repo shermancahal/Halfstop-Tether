@@ -166,10 +166,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         window.title = local ? "Halfstop Tether — local" : "Halfstop Tether — deployed"
         FileHandle.standardError.write(Data("Loading \(address)\n".utf8))
         if !local {
-            FileHandle.standardError.write(Data(
-                "This is the deployed site, not your working copy. For local changes:\n"
+            let hint = "This is the deployed site, not your working copy. For local changes:\n"
                 + "  npm run web\n"
-                + "  TETHER_URL=http://localhost:8099 swift run TetherApp\n".utf8))
+                + "  TETHER_URL=http://localhost:8099 swift run TetherApp\n"
+            FileHandle.standardError.write(Data(hint.utf8))
         }
 
         var request = URLRequest(url: URL(string: address)!)
@@ -204,10 +204,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             let outData = (body["outData"] as? String).flatMap { Data(base64Encoded: $0) }
             bridge.transact(command: command, outData: outData) { [weak self] response, payload, error in
                 if let error { self?.reply(id, ["error": error]); return }
-                self?.reply(id, [
-                    "response": response?.base64EncodedString() as Any,
-                    "payload": payload?.base64EncodedString() as Any,
-                ])
+                /*
+                 * Only the keys that have a value. A nil wrapped in `Any` is not
+                 * a JSON value, so JSONSerialization would have refused the whole
+                 * dictionary and the page would have been handed `{}` — a missing
+                 * response code reading as success. Every command without a data
+                 * phase takes that path.
+                 */
+                var result: [String: Any] = [:]
+                if let response { result["response"] = response.base64EncodedString() }
+                if let payload { result["payload"] = payload.base64EncodedString() }
+                self?.reply(id, result)
             }
         default:
             reply(id, ["error": "Unknown request \(kind)"])
