@@ -86,7 +86,27 @@ export function explainUsbError(error) {
   if (/No device selected/i.test(text)) return 'No camera was chosen.';
   if (/protected class/i.test(text)) return 'The browser refused this interface as a protected class. That should not happen for a camera — check it is in PTP mode rather than mass storage.';
   if (/Unable to claim|access denied|SecurityError/i.test(text)) {
-    return 'Something else is holding the camera. On macOS that is ptpcamerad: run "sudo launchctl disable system/com.apple.ptpcamerad" then "sudo killall ptpcamerad" and reconnect. On Linux, stop gvfs-gphoto2-volume-monitor.';
+    /*
+     * On macOS the holder is ptpcamerad, which launchd restarts on demand.
+     * Disabling only stops it loading next time, so the useful instruction is
+     * to check it is actually gone rather than to run a command and hope —
+     * which is how this failed twice before it was written down.
+     */
+    return [
+      'Something else is holding the camera.',
+      '',
+      'On macOS that is ptpcamerad. Run these, and check the last line says it is gone:',
+      '  sudo launchctl disable system/com.apple.ptpcamerad',
+      '  sudo launchctl bootout system/com.apple.ptpcamerad',
+      '  sudo killall -9 ptpcamerad cameracaptured 2>/dev/null; sleep 1',
+      '  ps -ax -o comm | grep -c ptpcamerad',
+      '',
+      'A count of 0 means the port is free. Then reload this page and connect again.',
+      'Do not run "launchctl enable" until you have finished with the camera.',
+      'Also close any other tab of this app: only one page can hold the camera.',
+      '',
+      'On Linux, stop gvfs-gphoto2-volume-monitor instead.',
+    ].join('\n');
   }
   if (/no WebUSB/i.test(text)) return text;
   return text;
