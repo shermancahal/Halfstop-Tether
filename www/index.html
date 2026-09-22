@@ -103,7 +103,8 @@
 
 <script type="module">
 import { App, renderCamera, renderChoices, renderPlan, show, el } from './src/ui/app.mjs';
-import { explainUsbError, usbDiagnostics } from './src/ptp/webusb.mjs';
+import { describeConnectionFailure, transportKind } from './src/ptp/connect.mjs';
+import { usbDiagnostics } from './src/ptp/webusb.mjs';
 
 const app = new App();
 
@@ -121,7 +122,7 @@ el('connect').onclick = async () => {
     app.status(`Connected. ${app.camera.writableByMode[app.camera.mode].length} of three exposure settings are mine to set in ${app.camera.mode}.`);
   } catch (error) {
     const seen = usbDiagnostics(app.transport?.device);
-    app.status(explainUsbError(error) + (seen ? `\n\nThe device, as the browser sees it:\n${JSON.stringify(seen, null, 2)}` : ''), true);
+    app.status(describeConnectionFailure(error) + (seen ? `\n\nThe device, as the browser sees it:\n${JSON.stringify(seen, null, 2)}` : ''), true);
   }
   el('connect').disabled = false;
 };
@@ -144,5 +145,14 @@ el('disconnect').onclick = async () => {
   app.status('Disconnected.');
 };
 
-app.status(navigator.usb ? '' : 'This browser has no WebUSB. Chrome or Edge on desktop or Android.');
+/* Inside the Mac app the camera comes through ImageCaptureCore, so the WebUSB
+   warning would be wrong as well as unhelpful. */
+if (transportKind() === 'ImageCaptureCore') {
+  el('connect').textContent = 'Connect to the camera';
+  document.querySelector('#connectScreen .sub').textContent =
+    'Through ImageCaptureCore, which is the only way in on this platform.';
+  app.status('');
+} else {
+  app.status(navigator.usb ? '' : 'This browser has no WebUSB. Chrome or Edge on desktop or Android.');
+}
 </script>

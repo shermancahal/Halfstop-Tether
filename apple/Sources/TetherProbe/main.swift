@@ -142,9 +142,9 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
         let command = PTP.command(PTP.getDeviceInfo)
         say("  command bytes  \(command.hexPreview())")
 
-        camera.requestSendPTPCommand(command, outData: nil) { [weak self] responseData, ptpData, error in
+        camera.requestSendPTPCommand(command, outData: nil) { [weak self] ptpResponse, payload, error in
             guard let self else { return }
-            self.report(label: "GetDeviceInfo", responseData: responseData, ptpData: ptpData, error: error)
+            self.report(label: "GetDeviceInfo", ptpResponse: ptpResponse, payload: payload, error: error)
             if error == nil { self.sendPropDesc(PTP.exposureProgramMode, named: "ExposureProgramMode") }
             else { self.finished = true }
         }
@@ -155,9 +155,9 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
         let command = PTP.command(PTP.getDevicePropDesc, transaction: 1, params: [code])
         say("\nSending GetDevicePropDesc for \(named) (0x\(String(code, radix: 16)))…")
 
-        camera.requestSendPTPCommand(command, outData: nil) { [weak self] responseData, ptpData, error in
+        camera.requestSendPTPCommand(command, outData: nil) { [weak self] ptpResponse, payload, error in
             guard let self else { return }
-            self.report(label: named, responseData: responseData, ptpData: ptpData, error: error)
+            self.report(label: named, ptpResponse: ptpResponse, payload: payload, error: error)
             if code == PTP.exposureProgramMode {
                 self.sendPropDesc(PTP.fNumber, named: "FNumber")
             } else {
@@ -169,7 +169,12 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
     }
 
     /// Print everything, because the shape of what comes back is the point.
-    private func report(label: String, responseData: Data?, ptpData: Data?, error: (any Error)?) {
+    /*
+     * The first parameter is the PTP response container and the second is the
+     * data payload — the reverse of what the names suggested. Proven by the
+     * first decoding as twelve bytes of type 3, code 0x2001, OK.
+     */
+    private func report(label: String, ptpResponse: Data?, payload: Data?, error: (any Error)?) {
         say("  [\(label)]")
         if let error = error as NSError? {
             say("    ERROR \(error.code): \(error.localizedDescription)")
@@ -179,12 +184,12 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
             }
             return
         }
-        say("    data      \(ptpData?.hexPreview() ?? "none")")
-        say("    response  \(responseData?.hexPreview() ?? "none")")
+        say("    response  \(ptpResponse?.hexPreview() ?? "none")")
+        say("    payload   \(payload?.hexPreview() ?? "none")")
 
         // GetDeviceInfo carries the model and firmware; decoding it here proves
         // the bytes are the PTP payload rather than something Apple wraps.
-        if label == "GetDeviceInfo", let payload = ptpData, payload.count > 24 {
+        if label == "GetDeviceInfo", let payload, payload.count > 24 {
             decodeDeviceInfo(payload)
         }
     }

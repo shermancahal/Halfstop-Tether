@@ -42,6 +42,22 @@ export class PtpSession {
    * Everything the app does to a camera goes through here.
    */
   async transaction({ opcode, params = [], dataOut = null, expectData = false }) {
+    /*
+     * The boundary docs/transport.md drew, now load-bearing. Android and
+     * WebUSB hand over bytes and we frame them; ImageCaptureCore takes a
+     * command and returns a response already framed. A transport that offers
+     * `transact` is the second kind, and everything above this line is
+     * identical either way.
+     */
+    if (this.transport.transact) {
+      const result = await this.transport.transact({ opcode, params, dataOut });
+      if (result.responseCode !== RESPONSE_OK) {
+        throw new PtpError(result.responseCode, `opcode 0x${opcode.toString(16)}`);
+      }
+      if (expectData && !result.data) throw new Error(`No data came back from 0x${opcode.toString(16)}`);
+      return { data: result.data ?? null, params: result.params ?? [] };
+    }
+
     const transactionId = this.#nextId();
     await this.transport.send(encodeCommand({ opcode, transactionId, params }));
     if (dataOut) await this.transport.send(encodeData({ opcode, transactionId, data: dataOut }));

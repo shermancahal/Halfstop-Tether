@@ -7,7 +7,7 @@
  * anyone having told it what mode the camera is in.
  */
 
-import { WebUsbTransport, explainUsbError } from '../ptp/webusb.mjs';
+import { connectTransport, transportKind } from '../ptp/connect.mjs';
 import { PtpSession } from '../ptp/session.mjs';
 import { readCameraState, toPlannerContext, lensFrom } from '../camera/live.mjs';
 import { profile, NIKON_Z5 } from '../photo/bodies.mjs';
@@ -50,16 +50,10 @@ export class App {
      */
     await this.disconnect();
 
-    this.status('Waiting for you to pick a camera…');
-    this.transport = await WebUsbTransport.request();
-    try {
-      await this.transport.open();
-    } catch (error) {
-      /* Opened but unclaimable: hand it back before reporting, or the next
-       * attempt inherits the problem. */
-      await this.transport.close();
-      throw error;
-    }
+    this.status(transportKind() === 'WebUSB'
+      ? 'Waiting for you to pick a camera…'
+      : 'Opening a session…');
+    this.transport = await connectTransport();
     this.session = new PtpSession(this.transport);
     const info = await this.session.open();
 

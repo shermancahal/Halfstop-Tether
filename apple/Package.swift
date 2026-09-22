@@ -19,5 +19,9 @@ let package = Package(
             name: "TetherProbe",
             path: "Sources/TetherProbe"
         ),
+        .executableTarget(
+            name: "TetherApp",
+            path: "Sources/TetherApp"
+        ),
     ]
 )
