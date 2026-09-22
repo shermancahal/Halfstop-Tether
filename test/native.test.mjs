@@ -11,7 +11,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { NativeTransport, hasNativeBridge } from '../src/ptp/native.mjs';
-import { installBridgeLog } from '../src/ptp/bridge-log.mjs';
+import { installBridgeLog, subscribeBridgeLog, bridgeLog } from '../src/ptp/bridge-log.mjs';
 import { describeOpcode, OC } from '../src/ptp/codec.mjs';
 
 /* A response container, by hand: length, type 3, code, transaction id. */
@@ -157,4 +157,24 @@ test('a fresh transport after a stall talks to the same host', async () => {
 
   assert.equal(second.stalled, null, 'and the second one is clean');
   assert.deepEqual(posted, ['open', 'transact', 'close', 'open', 'transact']);
+});
+
+test('a progress line that never changes is still a heartbeat', async () => {
+  /*
+   * The regression that cost a run. Reporting only when the percentage moved
+   * meant one line in fifty seconds, because it sat at 0% throughout — and the
+   * timeout, which measures silence, tripped at fifteen. Identical repeats
+   * must still reach the listener even though the log collapses them.
+   */
+  fakeHost();
+  installBridgeLog();
+  const heard = [];
+  const stop = subscribeBridgeLog((text) => heard.push(text));
+
+  const before = bridgeLog.lines.length;
+  for (let i = 0; i < 4; i++) globalThis.window.__ptpStatus('Indexing the card — 0%, 1s', true);
+  stop();
+
+  assert.equal(heard.length, 4, 'every repeat reaches the listener');
+  assert.equal(bridgeLog.lines.length, before + 1, 'and the log keeps only the last');
 });

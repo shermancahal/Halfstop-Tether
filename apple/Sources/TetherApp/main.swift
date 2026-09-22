@@ -46,6 +46,8 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
     /// Called with base64 event data whenever the camera volunteers one.
     var onEvent: ((String) -> Void)?
     var onStatus: ((String) -> Void)?
+    /* Progress: repeated, transient, and the page keeps only the last one. */
+    var onProgress: ((String) -> Void)?
 
     func start() {
         browser.delegate = self
@@ -141,7 +143,13 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
         let bytes = [UInt8](command)
         let opcode = bytes.count >= 8 ? Int(bytes[6]) | (Int(bytes[7]) << 8) : 0
         let label = String(format: "0x%04x", opcode)
-        onStatus?("→ \(label), \(command.count) bytes, \(size(outData)) bytes out")
+        /*
+         * Routine traffic is transient. Once connected the app re-reads six
+         * properties every 1.2 seconds, which is twelve lines a second - enough
+         * to bury the session and readiness lines that actually explain things.
+         * Failures below stay put.
+         */
+        onProgress?("→ \(label), \(command.count) bytes, \(size(outData)) bytes out")
 
         /*
          * Sent straight away, because the wait is not ours to manage.
@@ -158,7 +166,7 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
                 self?.onStatus?("← \(label) failed: \(error.localizedDescription)\(hint)")
                 done(nil, nil, "\(error.localizedDescription)\(hint)")
             } else {
-                self?.onStatus?("← \(label): \(self?.size(response) ?? 0) byte response, \(self?.size(payload) ?? 0) byte payload")
+                self?.onProgress?("← \(label): \(self?.size(response) ?? 0) byte response, \(self?.size(payload) ?? 0) byte payload")
                 done(response, payload, nil)
             }
         }
@@ -203,14 +211,23 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
     private func reportIndexing() {
         indexingTimer?.invalidate()
         guard !ready else { return }
-        var last = -1
+        onStatus?("macOS indexes the card before it will pass a command. Roughly a minute on a full one.")
+
+        /*
+         * Every second, unchanged or not.
+         *
+         * The first version only spoke when the percentage moved, to keep the
+         * log clean. The percentage sat at 0 for the whole fifty seconds, so
+         * it spoke once — and the timeout, which measures silence, tripped at
+         * fifteen and took the connection down with it. The repetition IS the
+         * signal. Elapsed seconds go in so the line is visibly alive even when
+         * the percentage is not.
+         */
+        let began = Date()
         indexingTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] timer in
             guard let self, let camera = self.camera, !self.ready else { timer.invalidate(); return }
-            let percent = camera.contentCatalogPercentCompleted
-            if percent != last {
-                last = percent
-                self.onStatus?("macOS is indexing the card — \(percent)%. Nothing can be asked of the camera until it finishes.")
-            }
+            let seconds = Int(Date().timeIntervalSince(began))
+            self.onProgress?("Indexing the card — \(camera.contentCatalogPercentCompleted)%, \(seconds)s")
         }
     }
 
@@ -296,14 +313,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         bridge.onEvent = { [weak self] base64 in
             self?.call("window.__ptpEvent && window.__ptpEvent('\(base64)')")
         }
+        /* The terminal is not where the person is looking. */
         bridge.onStatus = { [weak self] text in
             FileHandle.standardError.write(Data("\(text)\n".utf8))
-            /* The terminal is not where the person is looking. */
-            let escaped = text.replacingOccurrences(of: "\\", with: "\\\\")
-                .replacingOccurrences(of: "'", with: "\\'")
-                .replacingOccurrences(of: "\n", with: " ")
-            self?.call("window.__ptpStatus && window.__ptpStatus('\(escaped)')")
+            self?.tell(text, transient: false)
         }
+        bridge.onProgress = { [weak self] text in self?.tell(text, transient: true) }
         bridge.start()
 
         /*
@@ -469,6 +484,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         let json = (try? JSONSerialization.data(withJSONObject: payload))
             .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
         call("window.__ptpReply && window.__ptpReply(\(id), \(json))")
+    }
+
+    /// One line to the page. Transient lines replace the last transient line.
+    private func tell(_ text: String, transient: Bool) {
+        let escaped = text.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "\\'")
+            .replacingOccurrences(of: "\n", with: " ")
+        call("window.__ptpStatus && window.__ptpStatus('\(escaped)', \(transient))")
     }
 
     private func call(_ script: String) {

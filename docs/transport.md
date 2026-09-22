@@ -198,6 +198,12 @@ Two consequences for anything built on this transport:
   timeout measures silence instead: any word from the native side resets it,
   so progress keeps a request alive indefinitely while true silence still
   ends it.
+- **The heartbeat has to beat even when nothing changes.** The first attempt
+  at this reported progress only when the percentage moved, to keep the log
+  readable. `contentCatalogPercentCompleted` stayed at 0 for the entire fifty
+  seconds, so it spoke once and the timeout tripped anyway. Collapsing repeats
+  in the log and collapsing them on the wire are different things: the page
+  keeps only the last progress line, but every repeat reaches the timer.
 - **The wait has to be visible.** `contentCatalogPercentCompleted` is reported
   every second while it runs. A wait with a number on it is a different
   experience from a wait with nothing.

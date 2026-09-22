@@ -15,6 +15,7 @@ export const bridgeLog = { lines: [], latest: '' };
 
 const KEEP = 80;
 const listeners = new Set();
+let lastWasTransient = false;
 
 /** Every line, to everyone who asked. Returns the way to stop asking. */
 export function subscribeBridgeLog(fn) {
@@ -25,11 +26,20 @@ export function subscribeBridgeLog(fn) {
 export function installBridgeLog() {
   if (typeof window === 'undefined' || !window.webkit?.messageHandlers?.ptp) return false;
 
-  window.__ptpStatus = (text) => {
+  /*
+   * `transient` is a progress line: it replaces the last one rather than
+   * stacking fifty of them. It still reaches every listener, because the
+   * repetition is what tells the timeout that the wait is going somewhere —
+   * collapsing it in the log and collapsing it on the wire are different
+   * things, and the first version did both.
+   */
+  window.__ptpStatus = (text, transient = false) => {
+    if (lastWasTransient && bridgeLog.lines.length) bridgeLog.lines.pop();
     bridgeLog.lines.push(`${stamp()} ${text}`);
     if (bridgeLog.lines.length > KEEP) bridgeLog.lines.shift();
+    lastWasTransient = transient;
     bridgeLog.latest = text;
-    for (const fn of listeners) fn(text);
+    for (const fn of listeners) fn(text, transient);
   };
 
   /* Announcing ourselves gets the app build stamped into the log. */
