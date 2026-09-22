@@ -93,9 +93,22 @@ not on it, so a web page can drive a camera. Not on iOS, where Safari has no
 WebUSB and every browser is Safari underneath; but Chrome and Edge on the
 desktop, and Chrome on Android, which is one of the two shipping targets.
 
-That makes the browser a fourth shim under the same boundary, and the only one
-that can be exercised today with no developer account, no Xcode and no signing.
-`www/index.html` is that harness.
+That makes the browser a fourth shim under the same boundary. `www/index.html`
+is that harness, and it works — on Android and on Linux.
+
+**It does not work on macOS, and the reason is worth recording.** Chrome there
+reports `Failed to claim interface: Access denied (insufficient permissions)`
+on a device it can see perfectly: interface 0, class 0x06, with the bulk in,
+bulk out and interrupt in endpoints PTP needs, claimed by nobody. Killing every
+system camera daemon does not change it. gphoto2 succeeds against the same
+camera because libusb opens with `USBDeviceOpenSeize`, which takes the device
+from whatever holds it; Chrome opens without seizing and macOS refuses.
+
+Four rounds went into blaming `ptpcamerad` before the browser was asked what it
+actually said. The lesson is the one this file already argued for iOS and turns
+out to hold for the whole platform: **on Apple's systems you go through
+ImageCaptureCore rather than around it.** WebUSB stays the desktop and Android
+surface; macOS gets the same native path as iOS.
 
 So the transport layer cannot be *write bytes*. The line has to be drawn one
 level higher, at the transaction:
