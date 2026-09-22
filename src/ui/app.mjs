@@ -43,9 +43,23 @@ export class App {
   }
 
   async connect() {
+    /*
+     * Anything left over from a failed attempt still holds the device, so the
+     * second try fails for a reason the first one created — and it looks
+     * exactly like the system daemon holding it.
+     */
+    await this.disconnect();
+
     this.status('Waiting for you to pick a camera…');
     this.transport = await WebUsbTransport.request();
-    await this.transport.open();
+    try {
+      await this.transport.open();
+    } catch (error) {
+      /* Opened but unclaimable: hand it back before reporting, or the next
+       * attempt inherits the problem. */
+      await this.transport.close();
+      throw error;
+    }
     this.session = new PtpSession(this.transport);
     const info = await this.session.open();
 
@@ -68,7 +82,8 @@ export class App {
   }
 
   async disconnect() {
-    try { await this.session?.close(); await this.transport?.close(); } catch { /* going away anyway */ }
+    try { await this.session?.close(); } catch { /* going away anyway */ }
+    try { await this.transport?.close(); } catch { /* going away anyway */ }
     this.session = this.transport = this.state = this.camera = null;
   }
 
