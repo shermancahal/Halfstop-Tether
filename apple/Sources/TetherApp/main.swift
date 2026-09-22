@@ -122,10 +122,12 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
 
 // MARK: - The window
 
-final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler {
+final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler, WKNavigationDelegate {
     private var window: NSWindow!
     private var webView: WKWebView!
     private let bridge = CameraBridge()
+    private var address = ""
+    private var waitingForServer = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let controller = WKUserContentController()
@@ -139,6 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         configuration.websiteDataStore = .nonPersistent()
 
         webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.navigationDelegate = self
 
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 520, height: 860),
@@ -161,7 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
          * plainly which one is loaded, in the title bar and on the way past.
          * For a fast loop, run `npm run web` and set TETHER_URL.
          */
-        let address = ProcessInfo.processInfo.environment["TETHER_URL"] ?? "https://tether.halfstop.app"
+        address = ProcessInfo.processInfo.environment["TETHER_URL"] ?? "https://tether.halfstop.app"
         let local = address.contains("localhost") || address.contains("127.0.0.1")
         window.title = local ? "Halfstop Tether — local" : "Halfstop Tether — deployed"
         FileHandle.standardError.write(Data("Loading \(address)\n".utf8))
@@ -172,13 +175,90 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             FileHandle.standardError.write(Data(hint.utf8))
         }
 
-        var request = URLRequest(url: URL(string: address)!)
-        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        webView.load(request)
+        load()
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    private func load() {
+        guard let url = URL(string: address) else { return }
+        var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        webView.load(request)
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+
+    // MARK: When the page will not load
+
+    /*
+     * A blank white window is the worst answer to give. Both failure hooks land
+     * here: the page says which address it tried and what the system said about
+     * it, and then a probe waits quietly for the address to start answering.
+     * Start the server and the window fills itself in.
+     */
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!,
+                 withError error: Error) { showFailure(error) }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!,
+                 withError error: Error) { showFailure(error) }
+
+    private func showFailure(_ error: Error) {
+        let local = address.contains("localhost") || address.contains("127.0.0.1")
+        let advice = local
+            ? "The dev server is not answering. It needs a terminal of its own \u{2014} if you typed this one into its window, the ^C that gave you a prompt back took the server with it."
+            : "Check the network, or point the app at a local copy instead."
+        let commands = local
+            ? "cd ~/Documents/Claude/Halfstop-Tether\nnpm run web"
+            : "cd ~/Documents/Claude/Halfstop-Tether\nnpm run web\n\ncd apple\nTETHER_URL=http://localhost:8099 swift run TetherApp"
+
+        let page = """
+        <!doctype html><meta charset="utf-8">
+        <style>
+          :root { color-scheme: dark }
+          body { margin:0; padding:56px 34px; background:#0f1115; color:#e7e9ee;
+                 font:15px/1.65 -apple-system, system-ui, sans-serif }
+          h1 { font-size:19px; margin:0 0 10px; font-weight:600 }
+          p { color:#9aa1ad; margin:0 0 20px }
+          .said { color:#e5a05a; font-size:13px }
+          pre { background:#181c22; border:1px solid #272c35; border-radius:9px;
+                padding:13px 15px; overflow-x:auto; color:#cfd5df; font-size:13px; margin:0 0 20px }
+          button { font:inherit; font-size:14px; color:#0f1115; background:#7fb2ff; border:0;
+                   border-radius:8px; padding:9px 16px; cursor:pointer }
+        </style>
+        <h1>Nothing is serving \(address)</h1>
+        <p class="said">\(error.localizedDescription)</p>
+        <p>\(advice)</p>
+        <pre>\(commands)</pre>
+        <p>Leave it running. This window is watching, and will load the moment it answers.</p>
+        <button onclick="window.webkit.messageHandlers.ptp.postMessage({id:0,kind:'reload'})">Try now</button>
+        """
+        webView.loadHTMLString(page, baseURL: nil)
+        waitForServer()
+    }
+
+    /*
+     * Poll rather than reload, so the message on screen does not flicker. The
+     * delay sits in front of every attempt, not only the failed ones: a probe
+     * that somehow succeeds while the web view keeps failing would otherwise
+     * spin between the two as fast as the machine allows.
+     */
+    private func waitForServer() {
+        guard !waitingForServer, let url = URL(string: address) else { return }
+        waitingForServer = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            guard let self else { return }
+            var probe = URLRequest(url: url)
+            probe.timeoutInterval = 2
+            probe.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+            URLSession.shared.dataTask(with: probe) { [weak self] _, response, error in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.waitingForServer = false
+                    if error == nil, response != nil { self.load() } else { self.waitForServer() }
+                }
+            }.resume()
+        }
+    }
 
     // MARK: The bridge, from the page's side
 
@@ -195,6 +275,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         case "close":
             bridge.closeSession()
             reply(id, [:])
+        case "reload":
+            load()
         case "transact":
             guard let commandText = body["command"] as? String,
                   let command = Data(base64Encoded: commandText) else {

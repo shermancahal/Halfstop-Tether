@@ -86,11 +86,45 @@ npx serve www            # or any static server
 
 ---
 
+## The Mac app
+
+The fastest way to see the interface against a live camera, and the only one on
+this machine that reaches one at all. It needs no developer account.
+
+It wants **two terminals**, one for each half, and they do not share:
+
+```bash
+# Terminal A — the page. Leave it running.
+cd ~/Documents/Claude/Halfstop-Tether
+npm run web
+```
+
+```bash
+# Terminal B — the window.
+cd ~/Documents/Claude/Halfstop-Tether/apple
+TETHER_URL=http://localhost:8099 swift run TetherApp
+```
+
+Typing the second set into the first terminal does not run them — the process
+in front has stdin, so they queue up, and the Ctrl-C that gives the prompt back
+is what runs them. That also kills the server the app was about to ask for. Two
+windows, ⌘N.
+
+The title bar says which page is loaded: **local** is the working copy,
+**deployed** is <https://tether.halfstop.app> and will not show your edits.
+Without `TETHER_URL` it loads the deployed one.
+
+If nothing is serving the address, the window says so, prints what the system
+reported, and keeps probing — start the server and it loads itself.
+
 ## The browser harness
 
-The only surface that needs nothing from Apple. WebUSB works in Chrome and Edge
-on desktop and on Android; Safari has none, so it will not work there or on any
-iOS browser.
+Needs nothing from Apple, but does not work on a Mac. WebUSB is in Chrome and
+Edge on desktop and on Android; Safari has none. On macOS specifically, Chrome
+cannot claim a camera interface even with `ptpcamerad` disabled — it opens the
+device without seizing it, so the claim comes back "Access denied
+(insufficient permissions)". `docs/transport.md` has the detail. Android and
+Linux are where this surface is worth testing.
 
 ```bash
 sudo launchctl disable system/com.apple.ptpcamerad
