@@ -179,3 +179,28 @@ expensive question is whether the packet was malformed or the camera was being
 strange, and a known-good trace to diff against answers it directly. That is the
 single most useful debugging asset available for this kind of work, and it is
 why `tools/probe.mjs` shells out to gphoto2 rather than implementing anything.
+
+## ImageCaptureCore indexes the card before it will pass a command
+
+Measured, not assumed: two GetDeviceInfo commands sent fifteen seconds apart
+both completed in the same instant, fifty seconds after the session opened,
+immediately after `deviceDidBecomeReady`. ImageCaptureCore queues PTP until it
+has finished cataloguing the storage, and says nothing about doing so.
+
+This is the one failure mode that looks exactly like a broken camera, and it
+cost four wrong diagnoses — sleep, transaction framing, a leaked session, and
+sleep again. Three different fixed timeouts (30s, 8s, 15s) all expired on a
+connection that was working and about to answer.
+
+Two consequences for anything built on this transport:
+
+- **A deadline on the clock cannot tell a slow start from a dead one.** The
+  timeout measures silence instead: any word from the native side resets it,
+  so progress keeps a request alive indefinitely while true silence still
+  ends it.
+- **The wait has to be visible.** `contentCatalogPercentCompleted` is reported
+  every second while it runs. A wait with a number on it is a different
+  experience from a wait with nothing.
+
+The cost scales with what is on the card, and it is paid once per app launch
+rather than once per connect. An empty card is close to instant.

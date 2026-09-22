@@ -12,6 +12,7 @@
  */
 
 import { encodeCommand, decodeContainer, describeOpcode, CONTAINER } from './codec.mjs';
+import { subscribeBridgeLog } from './bridge-log.mjs';
 
 const toBase64 = (bytes) => btoa(String.fromCharCode(...bytes));
 const fromBase64 = (text) => {
@@ -30,22 +31,18 @@ export function hasNativeBridge() {
 /*
  * How long to wait before deciding nothing is coming back.
  *
- * A camera that is awake answers GetDeviceInfo in milliseconds. A camera that
- * has gone to sleep does not answer at all — no error, no refusal, silence —
- * so the only way to notice is to stop waiting. Thirty seconds of that, ending
- * in the word "opcode", is the worst possible way to be told the body needs a
- * nudge. Eight is long enough to be sure and short enough to act on.
+ * This measures silence, not elapsed time, and the difference is the whole
+ * story. ImageCaptureCore holds every PTP command until it has finished
+ * indexing the card, which took fifty seconds on a real one — so 30s, then 8s,
+ * then 15s all expired on a connection that was working perfectly and about to
+ * answer. A deadline on the clock cannot tell that apart from a camera that
+ * has stopped listening.
  *
- * A capture is the exception: a thirty-second exposure legitimately takes
- * thirty seconds, so whoever asks for one says how long to allow.
+ * The bridge now narrates the wait, so the timer resets on every line it
+ * sends. Progress keeps the request alive indefinitely; nothing at all for
+ * fifteen seconds is a real stall, whatever the clock says.
  */
-const OPEN_TIMEOUT_MS = 8000;
-/*
- * Fifteen rather than eight, now that the bridge narrates what it is doing:
- * the native side waits up to five seconds for the device to report ready
- * before a command even goes out, and eight left almost nothing after that.
- * A wait with a live log behind it is not the same as a wait with nothing.
- */
+const OPEN_TIMEOUT_MS = 15000;
 const DEFAULT_TIMEOUT_MS = 15000;
 
 export class NativeTransport {
@@ -60,11 +57,15 @@ export class NativeTransport {
     /* Set once something stops answering; see #post. */
     this.stalled = null;
 
+    /* Any word from the native side means the wait is still going somewhere. */
+    this.unsubscribe = subscribeBridgeLog(() => this.#heard());
+
     /* The host calls these. One reply channel, one event channel. */
     window.__ptpReply = (id, result) => {
       const waiting = this.pending.get(id);
       if (!waiting) return;
       this.pending.delete(id);
+      clearTimeout(waiting.timer);
       result?.error ? waiting.reject(new Error(result.error)) : waiting.resolve(result);
     };
     window.__ptpEvent = (base64) => {
@@ -84,19 +85,27 @@ export class NativeTransport {
 
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      const waiting = { resolve, reject, timeoutMs, describe, timer: null };
+      waiting.arm = () => {
+        clearTimeout(waiting.timer);
+        waiting.timer = setTimeout(() => {
+          if (!this.pending.delete(id)) return;
+          this.stalled = `Nothing from the camera for ${Math.round(timeoutMs / 1000)}s — `
+            + `${describe} went out and neither an answer nor a word about it came back.\n\n`
+            + 'Wake the camera (half-press the shutter, or turn any dial) and connect again; '
+            + 'if that does not do it, switch it off and on.';
+          reject(new Error(this.stalled));
+        }, waiting.timeoutMs);
+      };
+      this.pending.set(id, waiting);
+      waiting.arm();
       window.webkit.messageHandlers.ptp.postMessage({ ...message, id });
-      setTimeout(() => {
-        if (!this.pending.delete(id)) return;
-        this.stalled = `The camera stopped answering — ${describe} went out and nothing came back.\n\n`
-          + 'Two things do this and from here they look identical: a session a previous run left '
-          + 'open, which makes the body refuse the next program that asks, or a body that has gone '
-          + 'to sleep. Neither returns an error — that is what makes them the same. '
-          + 'Wake it (half-press the shutter, or turn any dial) and connect again; '
-          + 'if that does not do it, switch the camera off and on.';
-        reject(new Error(this.stalled));
-      }, timeoutMs);
     });
+  }
+
+  /* News from the native side. Not an answer, but not silence either. */
+  #heard() {
+    for (const waiting of this.pending.values()) waiting.arm?.();
   }
 
   async open() {
@@ -105,6 +114,7 @@ export class NativeTransport {
   }
 
   async close() {
+    this.unsubscribe?.();
     /* Closing is how a stall gets cleared, so it is the one thing a stall
      * must not block. */
     this.stalled = null;

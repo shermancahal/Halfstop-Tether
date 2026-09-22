@@ -11,9 +11,16 @@
  * the interesting messages arrive before then.
  */
 
-export const bridgeLog = { lines: [], onLine: null };
+export const bridgeLog = { lines: [], latest: '' };
 
 const KEEP = 80;
+const listeners = new Set();
+
+/** Every line, to everyone who asked. Returns the way to stop asking. */
+export function subscribeBridgeLog(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
 
 export function installBridgeLog() {
   if (typeof window === 'undefined' || !window.webkit?.messageHandlers?.ptp) return false;
@@ -21,7 +28,8 @@ export function installBridgeLog() {
   window.__ptpStatus = (text) => {
     bridgeLog.lines.push(`${stamp()} ${text}`);
     if (bridgeLog.lines.length > KEEP) bridgeLog.lines.shift();
-    bridgeLog.onLine?.(text);
+    bridgeLog.latest = text;
+    for (const fn of listeners) fn(text);
   };
 
   /* Announcing ourselves gets the app build stamped into the log. */

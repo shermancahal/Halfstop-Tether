@@ -41,7 +41,7 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
      * silence, so they wait here — briefly, and audibly.
      */
     private var ready = false
-    private var waitingForReady: [() -> Void] = []
+    private var indexingTimer: Timer?
 
     /// Called with base64 event data whenever the camera volunteers one.
     var onEvent: ((String) -> Void)?
@@ -143,16 +143,23 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
         let label = String(format: "0x%04x", opcode)
         onStatus?("→ \(label), \(command.count) bytes, \(size(outData)) bytes out")
 
-        whenReady { [weak self] in
-            camera.requestSendPTPCommand(command, outData: outData) { payload, response, error in
-                if let error = error as NSError? {
-                    let hint = error.code == -21249 ? " (PTPNotAuthorizedToSendCommand)" : ""
-                    self?.onStatus?("← \(label) failed: \(error.localizedDescription)\(hint)")
-                    done(nil, nil, "\(error.localizedDescription)\(hint)")
-                } else {
-                    self?.onStatus?("← \(label): \(self?.size(response) ?? 0) byte response, \(self?.size(payload) ?? 0) byte payload")
-                    done(response, payload, nil)
-                }
+        /*
+         * Sent straight away, because the wait is not ours to manage.
+         *
+         * ImageCaptureCore holds PTP commands until it has finished indexing
+         * the card and does not tell you it is doing so. The log caught it:
+         * two commands fifteen seconds apart both completed in the same
+         * instant, fifty seconds in, immediately after "Device reports ready".
+         * Gating our end changed nothing except when the "sent" line printed.
+         */
+        camera.requestSendPTPCommand(command, outData: outData) { [weak self] payload, response, error in
+            if let error = error as NSError? {
+                let hint = error.code == -21249 ? " (PTPNotAuthorizedToSendCommand)" : ""
+                self?.onStatus?("← \(label) failed: \(error.localizedDescription)\(hint)")
+                done(nil, nil, "\(error.localizedDescription)\(hint)")
+            } else {
+                self?.onStatus?("← \(label): \(self?.size(response) ?? 0) byte response, \(self?.size(payload) ?? 0) byte payload")
+                done(response, payload, nil)
             }
         }
     }
@@ -186,25 +193,25 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
         camera.capabilities.contains { "\($0)".contains("PTP") }
     }
 
-    /// Run `work` once the device says it is ready, or after a short wait.
-    private func whenReady(_ work: @escaping () -> Void) {
-        if ready { work(); return }
-        waitingForReady.append(work)
-        guard waitingForReady.count == 1 else { return }
-        onStatus?("Waiting for the device to report ready…")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
-            guard let self, !self.ready, !self.waitingForReady.isEmpty else { return }
-            /* Never fired. Send anyway — that is where we were before, and it
-             * is better than waiting forever with nothing on screen. */
-            self.onStatus?("It never reported ready. Sending anyway after 5s.")
-            self.drainReady()
+    /*
+     * Say how the indexing is going, every second, until it is done.
+     *
+     * This is the whole of the mystery: nothing answers for the best part of a
+     * minute and there was no way to tell that from a camera that had stopped
+     * answering. Now the wait has a number on it and a cause attached.
+     */
+    private func reportIndexing() {
+        indexingTimer?.invalidate()
+        guard !ready else { return }
+        var last = -1
+        indexingTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] timer in
+            guard let self, let camera = self.camera, !self.ready else { timer.invalidate(); return }
+            let percent = camera.contentCatalogPercentCompleted
+            if percent != last {
+                last = percent
+                self.onStatus?("macOS is indexing the card — \(percent)%. Nothing can be asked of the camera until it finishes.")
+            }
         }
-    }
-
-    private func drainReady() {
-        let work = waitingForReady
-        waitingForReady = []
-        for item in work { item() }
     }
 
     func deviceBrowser(_ browser: ICDeviceBrowser, didRemove device: ICDevice, moreGoing: Bool) {
@@ -214,6 +221,7 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
     func device(_ device: ICDevice, didOpenSessionWithError error: (any Error)?) {
         sessionOpen = error == nil
         onStatus?(error == nil ? "Session open." : "Session refused: \(error!.localizedDescription)")
+        if error == nil { reportIndexing() }
         waitingForSession?(error == nil, error?.localizedDescription)
         waitingForSession = nil
     }
@@ -236,14 +244,14 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
     func cameraDeviceDidRemoveAccessRestriction(_ device: ICDevice) {}
     func deviceDidBecomeReady(_ device: ICDevice) {
         ready = true
-        onStatus?("Device reports ready.")
-        drainReady()
+        indexingTimer?.invalidate()
+        onStatus?("Ready. Anything queued goes out now.")
     }
 
     func deviceDidBecomeReady(withCompleteContentCatalog device: ICCameraDevice) {
         ready = true
+        indexingTimer?.invalidate()
         onStatus?("Card finished indexing.")
-        drainReady()
     }
     func device(_ device: ICDevice, didCloseSessionWithError error: (any Error)?) {
         sessionOpen = false

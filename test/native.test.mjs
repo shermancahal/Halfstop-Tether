@@ -11,6 +11,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { NativeTransport, hasNativeBridge } from '../src/ptp/native.mjs';
+import { installBridgeLog } from '../src/ptp/bridge-log.mjs';
 import { describeOpcode, OC } from '../src/ptp/codec.mjs';
 
 /* A response container, by hand: length, type 3, code, transaction id. */
@@ -60,8 +61,36 @@ test('silence becomes advice, not an opcode', async () => {
 
   assert.ok(error, 'it gave up rather than waiting forever');
   assert.match(error.message, /GetDeviceInfo \(0x1001\)/, 'says which command');
-  assert.match(error.message, /gone to sleep/, 'names the likely cause');
+  assert.match(error.message, /Nothing from the camera/, 'says what was missing');
+  assert.match(error.message, /neither an answer nor a word about it/, 'silence, not slowness');
   assert.match(error.message, /half-press the shutter, or turn any dial/i, 'and what to do about it');
+});
+
+test('news from the bridge keeps a slow command alive', async () => {
+  /*
+   * The fifty-second case. ImageCaptureCore held GetDeviceInfo while it
+   * indexed the card and every fixed deadline expired on a connection that was
+   * working. Progress resets the clock; only real silence ends it.
+   */
+  fakeHost();                                   /* answers nothing, ever */
+  installBridgeLog();
+  const transport = new NativeTransport();
+  const pending = transport.transact({ opcode: OC.GetDeviceInfo, timeoutMs: 120 })
+    .then(() => 'answered', (e) => e);
+
+  let settled = false;
+  pending.then(() => { settled = true; });
+
+  for (let percent = 0; percent <= 75; percent += 15) {
+    await new Promise((r) => setTimeout(r, 70));
+    globalThis.window.__ptpStatus(`macOS is indexing the card — ${percent}%.`);
+  }
+
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(settled, false, '420ms against a 120ms budget, and still waiting');
+
+  const error = await pending;
+  assert.match(error.message, /Nothing from the camera/, 'and it ends once the news stops');
 });
 
 test('a wedged session says so at once instead of waiting all over again', async () => {

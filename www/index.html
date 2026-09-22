@@ -173,7 +173,7 @@
 import { App, renderCamera, renderChoices, renderPlan, show, el } from './src/ui/app.mjs';
 import { describeConnectionFailure, transportKind } from './src/ptp/connect.mjs';
 import { usbDiagnostics } from './src/ptp/webusb.mjs';
-import { bridgeLog, installBridgeLog } from './src/ptp/bridge-log.mjs';
+import { bridgeLog, installBridgeLog, subscribeBridgeLog } from './src/ptp/bridge-log.mjs';
 
 /*
  * Which code is running, on both sides of the bridge. The page build comes
@@ -199,11 +199,18 @@ if (installBridgeLog()) {
     log.textContent = bridgeLog.lines.join('\n');
     log.scrollTop = log.scrollHeight;
   };
-  bridgeLog.onLine = (text) => {
+  subscribeBridgeLog((text) => {
     const build = /^App build (.+)$/.exec(text);
     if (build) { appBuild = build[1]; paintBuilds(pageBuild); }
+    /*
+     * While connecting, the bridge is the only thing that knows anything, and
+     * "macOS is indexing the card — 42%" belongs where the person is looking
+     * rather than behind a disclosure triangle. Fifty seconds of a stuck
+     * button is what sent us chasing a camera fault that was not there.
+     */
+    if (el('connect').disabled) app.status(text);
     paintLog();
-  };
+  });
   paintLog();
 }
 
