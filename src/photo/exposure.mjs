@@ -45,16 +45,18 @@ export function solveExposure({ evScene, want = {}, absorb = 'iso', bounds = {},
   if (settings.shutter == null && absorb !== 'shutter') settings.shutter = bounds.shutter?.[1] ?? 1 / 125;
 
   /* Solve the absorbing axis from the other two. */
-  if (absorb === 'iso') {
-    settings.iso = isoFor({ ev: evScene, aperture: settings.aperture, shutter: settings.shutter });
-  } else if (absorb === 'shutter') {
-    settings.shutter = shutterFor({ ev: evScene, aperture: settings.aperture, iso: settings.iso });
-  } else if (absorb === 'aperture') {
-    settings.aperture = apertureFor({ ev: evScene, shutter: settings.shutter, iso: settings.iso });
-  }
+  const solveAbsorber = () => {
+    if (absorb === 'iso') {
+      settings.iso = isoFor({ ev: evScene, aperture: settings.aperture, shutter: settings.shutter });
+    } else if (absorb === 'shutter') {
+      settings.shutter = shutterFor({ ev: evScene, aperture: settings.aperture, iso: settings.iso });
+    } else if (absorb === 'aperture') {
+      settings.aperture = apertureFor({ ev: evScene, shutter: settings.shutter, iso: settings.iso });
+    }
+  };
 
-  /* Then hold it to what is possible, and to what the camera will accept. */
-  for (const axis of AXES) {
+  /* Hold an axis to what is possible, and to what the camera will accept. */
+  const settle = (axis) => {
     const bounded = clamp(settings[axis], bounds[axis]);
     if (bounded.clamped) {
       notes.push({ axis, kind: 'clamped', at: bounded.clamped, says: `${axis} hit its ${bounded.clamped === 'min' ? 'lowest' : 'highest'} allowed value` });
@@ -65,7 +67,24 @@ export function solveExposure({ evScene, want = {}, absorb = 'iso', bounds = {},
       notes.push({ axis, kind: 'snapped', offBy: snapped.offBy, says: `${axis} moved ${Math.abs(snapped.offBy).toFixed(2)} stops to a value the camera offers` });
     }
     settings[axis] = snapped.value;
-  }
+  };
+
+  /*
+   * Order matters, and it used to be the other way round.
+   *
+   * The pinned axes settle first, then the free one is solved against what
+   * they actually became. Solving it first meant a tracker asking for 240
+   * seconds got an ISO for 240 seconds, and then the shutter quietly snapped
+   * to the 30 the body's dial stops at — two numbers on screen, three stops
+   * apart, answering different questions.
+   *
+   * This is not forcing a balanced exposure. The absorbing axis is the free
+   * one by definition; a pinned axis that cannot be reached still reports its
+   * gap, and that gap is where the ND requirement comes from.
+   */
+  for (const axis of AXES) if (axis !== absorb) settle(axis);
+  solveAbsorber();
+  settle(absorb);
 
   const evAchieved = ev(settings);
   /*

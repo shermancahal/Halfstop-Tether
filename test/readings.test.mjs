@@ -14,6 +14,7 @@ import { formatShutter } from '../src/photo/units.mjs';
 import { formatAxis } from '../src/ui/app.mjs';
 import { stabilityAdvice } from '../src/photo/stability.mjs';
 import { npfLimit } from '../src/photo/motion.mjs';
+import { planFor } from '../src/plan/index.mjs';
 
 const fakeSession = (descs) => ({
   async getPropDesc(code) {
@@ -103,4 +104,63 @@ test('a caution is marked as one, so it can be coloured as one', () => {
   /* Turning the mode dial is still a job, not a caution. */
   const past = stabilityAdvice({ shutterS: 60, focalLength: 24, support: 'tripod' });
   assert.equal(past.find((a) => a.kind === 'past-thirty').severity, undefined);
+});
+
+test('a placeholder one short of the ceiling is still a placeholder', async () => {
+  /*
+   * 429497s came back after the exact-value check was in place. Vendors do not
+   * agree on which near-maximum value means bulb, means time, or means "ask me
+   * later", so equality is not enough — no camera holds the shutter open for
+   * five days either way.
+   */
+  for (const raw of [0xfffffff0, 4294970000]) {
+    const state = await readCameraState(fakeSession({ [DPC.ExposureTime]: desc(raw) }));
+    assert.equal(state.axes.shutter.value, null, `${raw} is not an exposure time`);
+    assert.equal(state.axes.shutter.special, 'none');
+  }
+  const real = await readCameraState(fakeSession({ [DPC.ExposureTime]: desc(120000) }));
+  assert.equal(real.axes.shutter.value, 12, 'and twelve seconds still is');
+});
+
+test('a tracker is worth stops, and the plan says how it got them', () => {
+  const camera = {
+    model: 'Z 5', pixelPitchUm: 5.94, widthPx: 6016, mode: 'M',
+    writableByMode: { M: ['shutter', 'aperture', 'iso'] },
+    legal: { shutter: [1 / 125, 1, 10, 15, 20, 25, 30], aperture: [2.8, 4], iso: [100, 400, 800, 1600, 3200, 6400] },
+    isoBounds: [100, 25600], current: {}, specials: {},
+  };
+  const lens = { focalLength: 24, maxAperture: 2.8, reported: true };
+  const at = (tracker) => planFor('milky-way', { camera, lens, site: { bortle: 3 }, want: { tracker } });
+
+  const loose = at('');
+  const tracked = at('careful');
+
+  assert.ok(tracked.settings.shutter > loose.settings.shutter, 'a longer exposure');
+  assert.ok(tracked.settings.iso < loose.settings.iso, 'bought with ISO');
+  assert.match(tracked.reasons.shutter, /polar error/, 'and it says where the number came from');
+  assert.match(tracked.reasons.shutter, /Off the tracker it would be/, 'against the untracked case');
+});
+
+test('the exposure on screen is internally consistent once everything has snapped', () => {
+  /*
+   * A tracker asks for 240s on a body whose dial stops at 30. Solving ISO
+   * against the 240 and then showing the 30 put two numbers on screen three
+   * stops apart, each correct for a different exposure.
+   */
+  const camera = {
+    model: 'Z 5', pixelPitchUm: 5.94, widthPx: 6016, mode: 'M',
+    writableByMode: { M: ['shutter', 'aperture', 'iso'] },
+    legal: { shutter: [1, 10, 30], aperture: [2.8], iso: [100, 200, 400, 800, 1600, 3200] },
+    isoBounds: [100, 25600], current: {}, specials: {},
+  };
+  const plan = planFor('milky-way', {
+    camera, lens: { focalLength: 20, maxAperture: 2.8, reported: true },
+    site: { bortle: 3 }, want: { tracker: 'careful' },
+  });
+
+  const { shutter, aperture, iso } = plan.settings;
+  const evAchieved = Math.log2((aperture ** 2) / shutter) - Math.log2(iso / 100);
+  assert.ok(Math.abs(evAchieved - -5.5) < 0.5,
+    `the three settings shown agree with the sky they were solved for (got EV ${evAchieved.toFixed(2)})`);
+  assert.ok(camera.legal.shutter.includes(shutter), 'and the shutter is one the camera offers');
 });

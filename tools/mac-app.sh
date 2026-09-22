@@ -31,7 +31,21 @@ if [ "$LOCAL" = "0" ]; then
 fi
 
 if curl -sf -o /dev/null --max-time 2 "http://localhost:$PORT/"; then
-  echo "Something is already serving port $PORT; using it."
+  # Reusing a server is fine; reusing one from a different checkout is how you
+  # spend an evening debugging a bug that was fixed three commits ago. The
+  # server reports what it is serving, so check before trusting it.
+  SERVING="$(curl -sf --max-time 2 "http://localhost:$PORT/deployed.txt" | head -1 || echo unknown)"
+  if [ "$SERVING" = "$TETHER_BUILD (working copy)" ]; then
+    echo "Reusing the server already on port $PORT, which is serving this checkout."
+  else
+    echo
+    echo "  A server is already on port $PORT and it is NOT serving this checkout."
+    echo "    it is serving: $SERVING"
+    echo "    you are on:    $TETHER_BUILD"
+    echo
+    echo "  Stop it (Ctrl-C in its terminal, or: pkill -f tools/serve.mjs) and run this again."
+    exit 1
+  fi
 else
   echo "Starting the dev server on port $PORT..."
   node "$REPO/tools/serve.mjs" >"$REPO/.server.log" 2>&1 &

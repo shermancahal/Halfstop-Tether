@@ -50,9 +50,33 @@ const ALL_ONES = { 0x0002: 0xff, 0x0004: 0xffff, 0x0006: 0xffffffff };
 
 export const SPECIAL_SHUTTER = { 0xffffffff: 'bulb', 0xfffffffe: 'time' };
 
-function readSpecial(name, raw, dataType) {
-  if (name === 'shutter' && SPECIAL_SHUTTER[raw]) return SPECIAL_SHUTTER[raw];
-  return ALL_ONES[dataType] === raw ? 'none' : null;
+/*
+ * What a real reading looks like.
+ *
+ * Matching the exact all-ones value is not enough. Vendors spend the top of
+ * the range on bulb, on time, and on "ask me later", and they do not agree on
+ * which value means which — so a placeholder one short of the maximum sails
+ * through an equality check and comes out the far side as a 429497-second
+ * exposure. Nothing outside these bounds is a setting any camera holds.
+ */
+const PLAUSIBLE = {
+  shutter: [1 / 64000, 3600],
+  aperture: [0.7, 100],
+  iso: [6, 4000000],
+  focalLength: [4, 2000],
+};
+
+function readSpecial(name, raw, dataType, decode) {
+  if (name === 'shutter' && SPECIAL_SHUTTER[raw] != null) return SPECIAL_SHUTTER[raw];
+  const top = ALL_ONES[dataType];
+  /* Near the ceiling of its type, with no name we know for it. */
+  if (top != null && raw >= top - 16) return 'none';
+
+  const bounds = PLAUSIBLE[name];
+  if (!bounds || typeof decode !== 'function') return null;
+  const value = decode(raw);
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return value < bounds[0] || value > bounds[1] ? 'none' : null;
 }
 
 /*
@@ -81,7 +105,7 @@ export async function readCameraState(session) {
   for (const [name, { code, decode }] of Object.entries(wanted)) {
     try {
       const desc = await session.getPropDesc(code);
-      const special = readSpecial(name, desc.current, desc.dataType);
+      const special = readSpecial(name, desc.current, desc.dataType, decode);
       axes[name] = {
         code,
         raw: desc.current,
@@ -92,7 +116,7 @@ export async function readCameraState(session) {
         special,
         writable: desc.writable,
         legal: desc.form === 'enum'
-          ? desc.values.filter((v) => !readSpecial(name, v, desc.dataType)).map(decode).sort((a, b) => a - b)
+          ? desc.values.filter((v) => !readSpecial(name, v, desc.dataType, decode)).map(decode).sort((a, b) => a - b)
           : null,
         range: desc.form === 'range'
           ? { min: decode(desc.range.min), max: decode(desc.range.max) }

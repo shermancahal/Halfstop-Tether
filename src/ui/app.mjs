@@ -45,6 +45,11 @@ const AXES = [
 
 const SPECIAL_NAMES = { bulb: 'Bulb', time: 'Time', none: '—' };
 
+/** The dial, spelled out. The letter is what is printed on the body. */
+export const MODE_NAMES = {
+  M: 'Manual', S: 'Shutter priority', A: 'Aperture priority', P: 'Program',
+};
+
 /**
  * One axis as text. `special` wins over any number, because when the camera
  * answers with a placeholder there is no number — that is the whole point of
@@ -173,8 +178,8 @@ export class App {
     this.session = this.transport = this.state = this.camera = this.info = null;
   }
 
-  plan(intentId) {
-    return planFor(intentId, { camera: this.camera, lens: this.lens, site: { bortle: 3 } });
+  plan(intentId, want = {}) {
+    return planFor(intentId, { camera: this.camera, lens: this.lens, site: { bortle: 3 }, want });
   }
 }
 
@@ -278,17 +283,54 @@ function renderGrid(plan, camera) {
     </div>`;
   }).join('');
 
+  /*
+   * The mode belongs in the corner of this table and nowhere else. Every
+   * "mine" and "yours" below is a consequence of it, and a reader who cannot
+   * see it has to take the labels on trust.
+   */
+  const mode = camera.mode ?? camera.current?.mode;
+  const corner = mode
+    ? `<span class="g-mode" title="${MODE_NAMES[mode] ?? mode}">${mode}</span><span class="g-mode-says">mode</span>`
+    : '';
+
   el('planGrid').innerHTML = `
-    <div class="g-corner"></div>
+    <div class="g-corner">${corner}</div>
     ${AXES.map((a) => `<div class="g-head">${a.label}</div>`).join('')}
     <div class="g-label">Current</div>${cells('current')}
     <div class="g-label">Ideal</div>${cells('ideal')}`;
 }
 
-export function renderPlan(plan, camera) {
+/*
+ * The things the camera cannot report.
+ *
+ * A star tracker is bolted to the tripod, not to the body, so no property will
+ * ever mention it — and it changes the answer by three stops. The intent
+ * declares what it needs to be told; this renders it without knowing what any
+ * of it means.
+ */
+function renderOptions(plan, onWant) {
+  const box = el('planOptions');
+  box.innerHTML = (plan.options ?? []).map((option) => `
+    <div class="opt">
+      <div class="opt-head"><span class="opt-label">${option.label}</span>
+        ${option.says ? `<span class="opt-says">${option.says}</span>` : ''}</div>
+      <div class="opt-choices">${option.choices.map((choice) => `
+        <button class="opt-choice ${(plan.want?.[option.id] ?? '') === choice.id ? 'on' : ''}"
+                data-option="${option.id}" data-choice="${choice.id}"
+                title="${choice.says ?? ''}">${choice.label}</button>`).join('')}</div>
+    </div>`).join('');
+  box.hidden = !(plan.options ?? []).length;
+
+  for (const button of box.querySelectorAll('.opt-choice')) {
+    button.onclick = () => onWant?.(button.dataset.option, button.dataset.choice);
+  }
+}
+
+export function renderPlan(plan, camera, onWant) {
   el('planTitle').textContent = plan.title;
   el('planWhere').textContent = camera.model ?? '';
 
+  renderOptions(plan, onWant);
   renderGrid(plan, camera);
 
   el('planRows').innerHTML = AXES.concat([{ id: 'frames', label: 'Frames' }])

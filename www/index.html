@@ -74,7 +74,15 @@
     background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
     overflow: hidden; margin-top: 14px;
   }
-  .g-corner { background: var(--raised); }
+  .g-corner {
+    background: var(--raised); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1px; padding: 6px 4px;
+  }
+  .g-mode { font-family: var(--serif); font-size: 17px; line-height: 1; color: var(--ink); }
+  .g-mode-says {
+    font-size: 8.5px; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
   .g-head {
     background: var(--raised); font-size: 10px; font-weight: 700; letter-spacing: .08em;
     text-transform: uppercase; color: var(--ink-3); padding: 9px 10px; text-align: center;
@@ -96,6 +104,19 @@
     display: block; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 9.5px;
     font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px;
   }
+
+  #planOptions { margin-top: 14px; }
+  .opt { margin-bottom: 10px; }
+  .opt-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .opt-label { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
+  .opt-says { font-size: 11px; color: var(--ink-3); opacity: .75; }
+  .opt-choices { display: flex; gap: 6px; flex-wrap: wrap; }
+  .opt-choice {
+    font: inherit; font-size: 12.5px; font-weight: 500; min-height: 36px; width: auto;
+    padding: 0 13px; border-radius: 8px; background: var(--surface);
+    border: 1px solid var(--line-strong); color: var(--ink-2); cursor: pointer;
+  }
+  .opt-choice.on { background: var(--raised); border-color: var(--line-bright); color: var(--ink); font-weight: 650; }
 
   .why { display: flex; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
   .why-axis {
@@ -150,6 +171,7 @@
   <section id="planScreen" hidden>
     <h2 id="planWhere"></h2>
     <h1 id="planTitle" style="font-size:26px"></h1>
+    <div id="planOptions" hidden></div>
     <div id="planGrid" class="grid"></div>
     <div id="planRows" style="margin-top:16px"></div>
     <h2 id="planFiltersHead" hidden>Filters</h2>
@@ -189,7 +211,13 @@ let pageBuild = 'unknown';
 paintBuilds(pageBuild);
 fetch('./deployed.txt', { cache: 'no-store' })
   .then((r) => (r.ok ? r.text() : 'unknown'))
-  .then((text) => { pageBuild = text.trim().split('\n')[0]; paintBuilds(pageBuild); })
+  .then((text) => {
+    pageBuild = text.trim().split('\n')[0];
+    paintBuilds(pageBuild);
+    /* Into the log too, so a pasted log says which page it came from. The app
+       build and the page build are deployed separately and can disagree. */
+    window.__ptpStatus?.(`Page build ${pageBuild}`);
+  })
   .catch(() => {});
 
 if (installBridgeLog()) {
@@ -235,7 +263,12 @@ function redraw(error) {
   }
   renderCamera(app, app.info);
   if (showing) {
-    try { renderPlan(app.plan(showing), app.camera); } catch (e) { app.status(e.message, true); }
+    try {
+      renderPlan(app.plan(showing, wants[showing] ?? {}), app.camera, (option, choice) => {
+        (wants[showing] ??= {})[option] = choice;
+        pick(showing);
+      });
+    } catch (e) { app.status(e.message, true); }
   }
 }
 
@@ -255,10 +288,16 @@ el('connect').onclick = async () => {
   el('connect').disabled = false;
 };
 
+/* What the person has told us that the camera cannot, kept per intent. */
+const wants = {};
+
 function pick(intentId) {
   try {
-    const plan = app.plan(intentId);
-    renderPlan(plan, app.camera);
+    wants[intentId] ??= {};
+    renderPlan(app.plan(intentId, wants[intentId]), app.camera, (option, choice) => {
+      wants[intentId][option] = choice;
+      pick(intentId);
+    });
     showing = intentId;
     screen('planScreen');
     app.status('');
