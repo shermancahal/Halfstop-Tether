@@ -106,8 +106,33 @@ export function explainUsbError(error) {
       'Also close any other tab of this app: only one page can hold the camera.',
       '',
       'On Linux, stop gvfs-gphoto2-volume-monitor instead.',
+      '',
+      `What the browser actually said: ${text}`,
     ].join('\n');
   }
   if (/no WebUSB/i.test(text)) return text;
   return text;
+}
+
+/**
+ * Claiming can fail for reasons that have nothing to do with the daemon, and
+ * the interface should say which. Reported separately so a wrong guess about
+ * the cause never hides what the browser actually reported.
+ */
+export function usbDiagnostics(device) {
+  if (!device) return null;
+  const configuration = device.configuration;
+  return {
+    product: [device.manufacturerName, device.productName].filter(Boolean).join(' '),
+    vendorId: `0x${device.vendorId?.toString(16).padStart(4, '0')}`,
+    productId: `0x${device.productId?.toString(16).padStart(4, '0')}`,
+    opened: device.opened,
+    configured: Boolean(configuration),
+    interfaces: (configuration?.interfaces ?? []).map((iface) => ({
+      number: iface.interfaceNumber,
+      claimed: iface.claimed,
+      classes: iface.alternates.map((a) => `0x${a.interfaceClass.toString(16).padStart(2, '0')}`),
+      endpoints: iface.alternates.flatMap((a) => a.endpoints.map((e) => `${e.direction}/${e.type}`)),
+    })),
+  };
 }

@@ -103,7 +103,7 @@
 
 <script type="module">
 import { App, renderCamera, renderChoices, renderPlan, show, el } from './src/ui/app.mjs';
-import { explainUsbError } from './src/ptp/webusb.mjs';
+import { explainUsbError, usbDiagnostics } from './src/ptp/webusb.mjs';
 
 const app = new App();
 
@@ -120,7 +120,8 @@ el('connect').onclick = async () => {
     screen('cameraScreen');
     app.status(`Connected. ${app.camera.writableByMode[app.camera.mode].length} of three exposure settings are mine to set in ${app.camera.mode}.`);
   } catch (error) {
-    app.status(explainUsbError(error), true);
+    const seen = usbDiagnostics(app.transport?.device);
+    app.status(explainUsbError(error) + (seen ? `\n\nThe device, as the browser sees it:\n${JSON.stringify(seen, null, 2)}` : ''), true);
   }
   el('connect').disabled = false;
 };
