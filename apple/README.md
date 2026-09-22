@@ -42,6 +42,25 @@ working app on your own phone can be done today.
 
 ---
 
+## The app, and where its interface comes from
+
+```bash
+swift run TetherApp
+```
+
+That window loads **the deployed site**, so editing `www/` here changes
+nothing in it until the change ships. For a loop where your edits appear
+immediately, serve the working copy and point the app at it:
+
+```bash
+npm run web                                       # in the repository root
+TETHER_URL=http://localhost:8099 swift run TetherApp
+```
+
+The title bar says which one you are looking at — "local" or "deployed" — and
+the app prints the address on the way past. That is worth a glance before
+concluding a fix did not work.
+
 ## Open it in Xcode
 
 ```bash

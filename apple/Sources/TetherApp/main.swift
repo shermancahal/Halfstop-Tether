@@ -133,10 +133,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
 
         let configuration = WKWebViewConfiguration()
         configuration.userContentController = controller
+        // Must be set BEFORE the web view is built: the configuration is
+        // copied at init, so assigning it afterwards changes nothing and the
+        // page quietly comes from a cache. That cost a round trip.
+        configuration.websiteDataStore = .nonPersistent()
 
         webView = WKWebView(frame: .zero, configuration: configuration)
-        // The page is under active development; never serve it from a cache.
-        webView.configuration.websiteDataStore = .nonPersistent()
 
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 520, height: 860),
@@ -153,8 +155,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         bridge.onStatus = { text in FileHandle.standardError.write(Data("\(text)\n".utf8)) }
         bridge.start()
 
+        /*
+         * Where the interface comes from. The deployed site by default, which
+         * means a change here is not a change there until it ships — so say
+         * plainly which one is loaded, in the title bar and on the way past.
+         * For a fast loop, run `npm run web` and set TETHER_URL.
+         */
         let address = ProcessInfo.processInfo.environment["TETHER_URL"] ?? "https://tether.halfstop.app"
-        webView.load(URLRequest(url: URL(string: address)!))
+        let local = address.contains("localhost") || address.contains("127.0.0.1")
+        window.title = local ? "Halfstop Tether — local" : "Halfstop Tether — deployed"
+        FileHandle.standardError.write(Data("Loading \(address)\n".utf8))
+        if !local {
+            FileHandle.standardError.write(Data(
+                "This is the deployed site, not your working copy. For local changes:\n"
+                + "  npm run web\n"
+                + "  TETHER_URL=http://localhost:8099 swift run TetherApp\n".utf8))
+        }
+
+        var request = URLRequest(url: URL(string: address)!)
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        webView.load(request)
         NSApp.activate(ignoringOtherApps: true)
     }
 
