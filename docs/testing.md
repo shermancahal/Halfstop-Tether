@@ -91,24 +91,28 @@ npx serve www            # or any static server
 The fastest way to see the interface against a live camera, and the only one on
 this machine that reaches one at all. It needs no developer account.
 
-It wants **two terminals**, one for each half, and they do not share:
+One command, one terminal:
 
 ```bash
-# Terminal A — the page. Leave it running.
 cd ~/Documents/Claude/Halfstop-Tether
-npm run web
+npm run mac              # the deployed site
+npm run mac:local        # your working copy, server and all
 ```
+
+`mac:local` starts the dev server as a background child with a trap on it, so
+closing the window takes the server down too. It also notices a server already
+on the port and leaves that one alone rather than starting a second.
+
+That wrapper exists because doing it by hand in one terminal does not work. The
+process in front owns stdin, so a second set of commands typed into the same
+window queues up behind it, and the Ctrl-C that gives the prompt back is what
+finally runs them — after killing the server they were about to need. By hand
+it is two windows, ⌘N:
 
 ```bash
-# Terminal B — the window.
-cd ~/Documents/Claude/Halfstop-Tether/apple
-TETHER_URL=http://localhost:8099 swift run TetherApp
+npm run web                                                   # terminal A
+cd apple && TETHER_URL=http://localhost:8099 swift run TetherApp   # terminal B
 ```
-
-Typing the second set into the first terminal does not run them — the process
-in front has stdin, so they queue up, and the Ctrl-C that gives the prompt back
-is what runs them. That also kills the server the app was about to ask for. Two
-windows, ⌘N.
 
 The title bar says which page is loaded: **local** is the working copy,
 **deployed** is <https://tether.halfstop.app> and will not show your edits.

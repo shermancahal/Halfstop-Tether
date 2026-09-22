@@ -8,3 +8,4 @@ android/
 design/*.html
 !design/*.dc.html
 dist/
+.server.log

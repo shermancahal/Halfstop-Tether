@@ -15,7 +15,9 @@
     "doctor": "npx cap doctor",
     "fixture": "node tools/make-fixture.mjs",
     "web": "node tools/serve.mjs",
-    "build": "node tools/build-dist.mjs"
+    "build": "node tools/build-dist.mjs",
+    "mac": "bash tools/mac-app.sh",
+    "mac:local": "bash tools/mac-app.sh --local"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
