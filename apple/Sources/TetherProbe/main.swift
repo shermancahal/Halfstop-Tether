@@ -91,6 +91,13 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
             RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.2))
         }
         if !finished { say("\nNo camera answered within 45 seconds.") }
+
+        /*
+         * Always hand the session back. Leaving one open makes the camera
+         * refuse the next program that asks, and the only cure a person finds
+         * is switching the body off and on again.
+         */
+        camera?.requestCloseSession()
         browser.stop()
     }
 
@@ -162,7 +169,6 @@ final class Probe: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDelegate {
                 self.sendPropDesc(PTP.fNumber, named: "FNumber")
             } else {
                 self.say("\nDone. Send this whole output back.")
-                self.camera?.requestCloseSession()
                 self.finished = true
             }
         }

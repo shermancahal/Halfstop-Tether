@@ -89,14 +89,24 @@ export class PtpSession {
     /* Device info is readable before a session exists, and says what to expect. */
     const { data } = await this.transaction({ opcode: OC.GetDeviceInfo, expectData: true });
     this.deviceInfo = parseDeviceInfo(data);
-    await this.transaction({ opcode: OC.OpenSession, params: [1] });
+
+    /*
+     * ImageCaptureCore opens the session itself, through requestOpenSession,
+     * and a PTP OpenSession on top of an open one does not come back. A
+     * transport that manages its own session says so and we leave it alone.
+     */
+    if (!this.transport.managesSession) {
+      await this.transaction({ opcode: OC.OpenSession, params: [1] });
+    }
     this.sessionOpen = true;
     return this.deviceInfo;
   }
 
   async close() {
     if (!this.sessionOpen) return;
-    try { await this.transaction({ opcode: OC.CloseSession }); } finally { this.sessionOpen = false; }
+    this.sessionOpen = false;
+    if (this.transport.managesSession) return;   /* its session, its business */
+    try { await this.transaction({ opcode: OC.CloseSession }); } catch { /* already gone */ }
   }
 
   /** The descriptor: current value, legal values, and whether we may write it. */

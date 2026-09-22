@@ -115,3 +115,52 @@ test('closing a session that was never open does nothing', async () => {
   await new PtpSession(t).close();
   assert.equal(t.sent.length, 0);
 });
+
+/* ---------- transports that own their own session ---------- */
+
+test('a transport that manages its session is not handed a second one', async () => {
+  /*
+   * ImageCaptureCore opens the session through requestOpenSession, and a PTP
+   * OpenSession on top of an open one simply does not come back — thirty
+   * seconds of nothing, which is how this was found.
+   */
+  const info = bytes(
+    u16(100), u32(0x0a), u16(100), str(''), u16(0),
+    u32(0), u32(0), u32(0), u32(0), u32(0),
+    str('Nikon'), str('Z 5'), str('1.40'), str('1'),
+  );
+  const seen = [];
+  const native = {
+    managesSession: true,
+    async transact({ opcode }) {
+      seen.push(opcode);
+      return { responseCode: RESPONSE_OK, params: [], data: opcode === OC.GetDeviceInfo ? info : null };
+    },
+  };
+  const s = new PtpSession(native);
+  const got = await s.open();
+  assert.equal(got.model, 'Z 5');
+  assert.deepEqual(seen, [OC.GetDeviceInfo], 'OpenSession must not be sent');
+  await s.close();
+  assert.ok(!seen.includes(OC.CloseSession), 'nor CloseSession');
+});
+
+test('a byte-level transport still gets its session opened for it', async () => {
+  const info = bytes(
+    u16(100), u32(0x0a), u16(100), str(''), u16(0),
+    u32(0), u32(0), u32(0), u32(0), u32(0),
+    str('Nikon'), str('Z 5'), str('1.40'), str('1'),
+  );
+  const t = new FakeTransport([encodeData({ opcode: OC.GetDeviceInfo, transactionId: 1, data: info }), response(), response()]);
+  const s = new PtpSession(t);
+  await s.open();
+  assert.deepEqual(t.sent.map((c) => c.code), [OC.GetDeviceInfo, OC.OpenSession]);
+});
+
+test('a command-level transport reports refusals the same way', async () => {
+  const native = {
+    managesSession: true,
+    async transact() { return { responseCode: 0xa009, params: [] }; },
+  };
+  await assert.rejects(() => new PtpSession(native).transaction({ opcode: OC.NikonMfDrive }), /live view/i);
+});

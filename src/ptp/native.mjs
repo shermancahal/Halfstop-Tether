@@ -28,6 +28,9 @@ export function hasNativeBridge() {
 }
 
 export class NativeTransport {
+  /* ImageCaptureCore opens and closes the PTP session itself. */
+  managesSession = true;
+
   constructor() {
     this.pending = new Map();
     this.nextId = 1;
@@ -47,14 +50,14 @@ export class NativeTransport {
     };
   }
 
-  #post(message) {
+  #post(message, describe = message.kind) {
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
       window.webkit.messageHandlers.ptp.postMessage({ ...message, id });
       /* A native side that never answers should not hang the interface. */
       setTimeout(() => {
-        if (this.pending.delete(id)) reject(new Error(`The camera did not answer ${message.kind}`));
+        if (this.pending.delete(id)) reject(new Error(`The camera did not answer ${describe} within 30 seconds`));
       }, 30000);
     });
   }
@@ -70,7 +73,7 @@ export class NativeTransport {
       kind: 'transact',
       command: toBase64(command),
       outData: dataOut ? toBase64(dataOut) : null,
-    });
+    }, `opcode 0x${opcode.toString(16)}`);
 
     const responseBytes = fromBase64(reply.response);
     const container = responseBytes ? decodeContainer(responseBytes) : null;
