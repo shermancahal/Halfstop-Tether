@@ -97,3 +97,35 @@ test('a real answer comes back framed, with the response code intact', async () 
   assert.equal(result.responseCode, 0x2001);
   assert.equal(result.data, null, 'a command with no data phase brings none back');
 });
+
+test('a fresh transport after a stall talks to the same host', async () => {
+  /*
+   * The recovery the app now performs by itself: the first session is silent,
+   * it is handed back, and a new one answers. Worth pinning because the retry
+   * is only correct if a new transport is genuinely independent of the stalled
+   * one — a stall recorded anywhere shared would poison the retry too.
+   */
+  let opened = 0;
+  const posted = [];
+  globalThis.window = {
+    webkit: { messageHandlers: { ptp: { postMessage(message) {
+      posted.push(message.kind);
+      if (message.kind === 'open') opened += 1;
+      if (message.kind === 'transact' && opened < 2) return;   /* the stale session */
+      queueMicrotask(() => globalThis.window.__ptpReply(message.id, {}));
+    } } } },
+  };
+
+  const first = new NativeTransport();
+  await first.open();
+  await first.transact({ opcode: OC.GetDeviceInfo, timeoutMs: 20 }).catch(() => {});
+  assert.ok(first.stalled, 'the first one gave up');
+
+  await first.close();
+  const second = new NativeTransport();
+  await second.open();
+  await second.transact({ opcode: OC.GetDeviceInfo, timeoutMs: 200 });
+
+  assert.equal(second.stalled, null, 'and the second one is clean');
+  assert.deepEqual(posted, ['open', 'transact', 'close', 'open', 'transact']);
+});

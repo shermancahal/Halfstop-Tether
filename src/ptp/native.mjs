@@ -83,8 +83,11 @@ export class NativeTransport {
       setTimeout(() => {
         if (!this.pending.delete(id)) return;
         this.stalled = `The camera stopped answering — ${describe} went out and nothing came back.\n\n`
-          + 'A body that has gone to sleep does exactly this: no error, no refusal, silence. '
-          + 'Wake it (half-press the shutter, or turn any dial), then connect again.';
+          + 'Two things do this and from here they look identical: a session a previous run left '
+          + 'open, which makes the body refuse the next program that asks, or a body that has gone '
+          + 'to sleep. Neither returns an error — that is what makes them the same. '
+          + 'Wake it (half-press the shutter, or turn any dial) and connect again; '
+          + 'if that does not do it, switch the camera off and on.';
         reject(new Error(this.stalled));
       }, timeoutMs);
     });

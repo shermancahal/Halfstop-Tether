@@ -32,6 +32,9 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
     private var camera: ICCameraDevice?
     private var sessionOpen = false
     private var waitingForSession: ((Bool, String?) -> Void)?
+    /* An open that arrived while a close was still in flight. */
+    private var pendingOpen: ((Bool, String?) -> Void)?
+    private var closing = false
 
     /// Called with base64 event data whenever the camera volunteers one.
     var onEvent: ((String) -> Void)?
@@ -46,15 +49,55 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
 
     func openSession(_ done: @escaping (Bool, String?) -> Void) {
         guard let camera else { done(false, "No camera found. Plug one in and switch it on."); return }
-        if sessionOpen { done(true, nil); return }
+        if sessionOpen || camera.hasOpenSession { sessionOpen = true; done(true, nil); return }
+
+        /*
+         * Opening while a close is still in flight is how a reconnect ends up
+         * talking to a session that is on its way out. Wait for the close to
+         * land; `didCloseSessionWithError` picks this up.
+         */
+        if closing { pendingOpen = done; return }
+        if waitingForSession != nil { done(false, "A session is already being opened."); return }
         waitingForSession = done
         camera.requestOpenSession()
     }
 
+    /*
+     * Always hand the session back.
+     *
+     * The probe has carried this warning since the first run and the app did
+     * not act on it: leaving one open makes the camera refuse the next program
+     * that asks, and the cure a person finds is switching the body off and on.
+     * Closing the window used to leak one every time.
+     */
     func closeSession() {
-        guard sessionOpen else { return }
-        camera?.requestCloseSession()
+        guard sessionOpen || camera?.hasOpenSession == true else { return }
+        closing = true
         sessionOpen = false
+        camera?.requestCloseSession()
+        /* If the close is never acknowledged, do not wedge the next open. */
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            guard let self, self.closing else { return }
+            self.closing = false
+            if let pending = self.pendingOpen { self.pendingOpen = nil; self.openSession(pending) }
+        }
+    }
+
+    /// Hand the session back, and stay alive long enough for that to land.
+    func stop() {
+        guard sessionOpen || camera?.hasOpenSession == true else { browser.stop(); return }
+        closeSession()
+        /*
+         * requestCloseSession is asynchronous and the process is about to end.
+         * Posting it and returning throws the request away with the run loop,
+         * which looks exactly like closing it properly and is not. Wait for the
+         * acknowledgement, briefly, rather than trust it.
+         */
+        let deadline = Date().addingTimeInterval(1.5)
+        while closing, Date() < deadline {
+            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
+        }
+        browser.stop()
     }
 
     /// The whole of this bridge: bytes in, bytes out, no interpretation.
@@ -117,7 +160,11 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
     func cameraDeviceDidRemoveAccessRestriction(_ device: ICDevice) {}
     func deviceDidBecomeReady(_ device: ICDevice) {}
     func deviceDidBecomeReady(withCompleteContentCatalog device: ICCameraDevice) {}
-    func device(_ device: ICDevice, didCloseSessionWithError error: (any Error)?) { sessionOpen = false }
+    func device(_ device: ICDevice, didCloseSessionWithError error: (any Error)?) {
+        sessionOpen = false
+        closing = false
+        if let pending = pendingOpen { pendingOpen = nil; openSession(pending) }
+    }
 }
 
 // MARK: - The window
@@ -187,6 +234,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+
+    /* The session outlives this process unless it is handed back here. */
+    func applicationWillTerminate(_ notification: Notification) { bridge.stop() }
 
     // MARK: When the page will not load
 

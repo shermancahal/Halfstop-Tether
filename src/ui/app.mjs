@@ -87,7 +87,23 @@ export class App {
       : 'Opening a session…');
     this.transport = await connectTransport();
     this.session = new PtpSession(this.transport);
-    this.info = await this.session.open();
+
+    try {
+      this.info = await this.session.open();
+    } catch (error) {
+      /*
+       * Silence on the very first command is usually a session the last run
+       * left open. Closing it and opening a fresh one is exactly what a person
+       * does by hand before it works, so do it here once instead of making
+       * them. A second silence is a real one and gets reported.
+       */
+      if (!this.transport?.stalled) throw error;
+      this.status('No answer. Handing the session back and trying once more…');
+      await this.disconnect();
+      this.transport = await connectTransport();
+      this.session = new PtpSession(this.transport);
+      this.info = await this.session.open();
+    }
 
     this.status('Reading what it will let me set…');
     await this.refresh();
