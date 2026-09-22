@@ -133,11 +133,15 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
          * arrives and says what it carried, or nothing does and the absence is
          * the finding. Both halves end up on screen.
          */
-        let opcode = command.count >= 8
-            ? UInt16(command[6]) | (UInt16(command[7]) << 8)
-            : 0
+        /*
+         * The opcode lives at bytes 6-7 of the container. Read it off a plain
+         * array rather than indexing Data, whose indices are not guaranteed to
+         * start at zero once it has been sliced.
+         */
+        let bytes = [UInt8](command)
+        let opcode = bytes.count >= 8 ? Int(bytes[6]) | (Int(bytes[7]) << 8) : 0
         let label = String(format: "0x%04x", opcode)
-        onStatus?("→ \(label), \(command.count) bytes\(outData.map { ", \($0.count) bytes out" } ?? "")")
+        onStatus?("→ \(label), \(command.count) bytes, \(size(outData)) bytes out")
 
         whenReady { [weak self] in
             camera.requestSendPTPCommand(command, outData: outData) { payload, response, error in
@@ -146,12 +150,23 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
                     self?.onStatus?("← \(label) failed: \(error.localizedDescription)\(hint)")
                     done(nil, nil, "\(error.localizedDescription)\(hint)")
                 } else {
-                    self?.onStatus?("← \(label): \(response?.count ?? 0) byte response, \(payload?.count ?? 0) byte payload")
+                    self?.onStatus?("← \(label): \(self?.size(response) ?? 0) byte response, \(self?.size(payload) ?? 0) byte payload")
                     done(response, payload, nil)
                 }
             }
         }
     }
+
+    /*
+     * How many bytes, whatever the SDK thinks.
+     *
+     * requestSendPTPCommand hands these back as Data here and as Data? on
+     * other SDKs, and `x?.count` is an error for one while `x.count` is an
+     * error for the other. A parameter typed Data? takes both, because a
+     * non-optional promotes on the way in. One helper instead of a guess per
+     * platform - this cost a build.
+     */
+    private func size(_ data: Data?) -> Int { data?.count ?? 0 }
 
     // MARK: Delegates
 

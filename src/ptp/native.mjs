@@ -40,7 +40,13 @@ export function hasNativeBridge() {
  * thirty seconds, so whoever asks for one says how long to allow.
  */
 const OPEN_TIMEOUT_MS = 8000;
-const DEFAULT_TIMEOUT_MS = 8000;
+/*
+ * Fifteen rather than eight, now that the bridge narrates what it is doing:
+ * the native side waits up to five seconds for the device to report ready
+ * before a command even goes out, and eight left almost nothing after that.
+ * A wait with a live log behind it is not the same as a wait with nothing.
+ */
+const DEFAULT_TIMEOUT_MS = 15000;
 
 export class NativeTransport {
   /* ImageCaptureCore opens and closes the PTP session itself. */
