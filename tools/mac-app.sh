@@ -16,12 +16,17 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT="${PORT:-8099}"
+
+# Stamp the binary with what it was built from, so the title bar can say.
+# A dirty working copy says so too - that difference has mattered already.
+export TETHER_BUILD="$(git -C "$REPO" describe --always --dirty --tags 2>/dev/null || echo unknown)"
 LOCAL=0
 [ "${1:-}" = "--local" ] && LOCAL=1
 
 if [ "$LOCAL" = "0" ]; then
   echo "Loading the deployed site. For your working copy instead: npm run mac:local"
   cd "$REPO/apple"
+  echo "Build $TETHER_BUILD"
   exec swift run TetherApp
 fi
 
@@ -50,4 +55,5 @@ fi
 echo "Serving your working copy. Close the window to stop both."
 cd "$REPO/apple"
 # Without this the app loads the deployed site and nothing above mattered.
+echo "Build $TETHER_BUILD"
 TETHER_URL="http://localhost:$PORT" swift run TetherApp

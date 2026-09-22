@@ -39,6 +39,17 @@
   .camera-lens.assumed { color: var(--warn); }
   #cameraNotes { margin: 12px 0 0; padding-left: 18px; font-size: 12.5px; line-height: 1.5; color: var(--warn); }
 
+  /* The build, always on screen. Knowing which code is running is not a
+     detail when a fault may or may not be in the binary being run. */
+  #builds { font-size: 11px; color: var(--ink-3); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            margin: 26px 0 0; padding-top: 10px; border-top: 1px solid var(--line); }
+  #bridgeBox { margin-top: 14px; }
+  #bridgeBox summary { font-size: 11.5px; color: var(--ink-3); cursor: pointer; }
+  #bridgeLog { margin: 8px 0 0; padding: 10px 12px; background: #131517; border: 1px solid var(--line);
+               border-radius: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+               font-size: 10.5px; line-height: 1.55; color: var(--ink-2); max-height: 240px;
+               overflow-y: auto; white-space: pre-wrap; }
+
   .raw { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
   .raw summary { font-size: 11.5px; color: var(--ink-3); cursor: pointer; }
   .raw table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px;
@@ -150,12 +161,51 @@
   </section>
 
   <p id="status"></p>
+
+  <details id="bridgeBox" hidden><summary>What the Mac app is doing</summary>
+    <pre id="bridgeLog"></pre>
+  </details>
+
+  <p id="builds"></p>
 </main>
 
 <script type="module">
 import { App, renderCamera, renderChoices, renderPlan, show, el } from './src/ui/app.mjs';
 import { describeConnectionFailure, transportKind } from './src/ptp/connect.mjs';
 import { usbDiagnostics } from './src/ptp/webusb.mjs';
+import { bridgeLog, installBridgeLog } from './src/ptp/bridge-log.mjs';
+
+/*
+ * Which code is running, on both sides of the bridge. The page build comes
+ * from the deploy (or from git, when a dev server is serving the working
+ * copy); the app build arrives down the status channel when the page
+ * announces itself.
+ */
+let appBuild = 'no app';
+const paintBuilds = (pageBuild) => {
+  el('builds').textContent = `page ${pageBuild}  ·  app ${appBuild}`;
+};
+let pageBuild = 'unknown';
+paintBuilds(pageBuild);
+fetch('./deployed.txt', { cache: 'no-store' })
+  .then((r) => (r.ok ? r.text() : 'unknown'))
+  .then((text) => { pageBuild = text.trim().split('\n')[0]; paintBuilds(pageBuild); })
+  .catch(() => {});
+
+if (installBridgeLog()) {
+  show('bridgeBox', true);
+  const paintLog = () => {
+    const log = el('bridgeLog');
+    log.textContent = bridgeLog.lines.join('\n');
+    log.scrollTop = log.scrollHeight;
+  };
+  bridgeLog.onLine = (text) => {
+    const build = /^App build (.+)$/.exec(text);
+    if (build) { appBuild = build[1]; paintBuilds(pageBuild); }
+    paintLog();
+  };
+  paintLog();
+}
 
 const app = new App();
 let showing = null;          /* the intent on screen, so a dial move can redraw it */

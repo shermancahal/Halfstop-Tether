@@ -35,6 +35,13 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
     /* An open that arrived while a close was still in flight. */
     private var pendingOpen: ((Bool, String?) -> Void)?
     private var closing = false
+    /*
+     * ImageCaptureCore opens a session and then goes away to index the card.
+     * Commands sent before it has finished are the leading suspect for the
+     * silence, so they wait here — briefly, and audibly.
+     */
+    private var ready = false
+    private var waitingForReady: [() -> Void] = []
 
     /// Called with base64 event data whenever the camera volunteers one.
     var onEvent: ((String) -> Void)?
@@ -113,12 +120,35 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
          * which is DeviceInfo's 0xffffffff vendor extension field being read as a
          * container header.
          */
-        camera.requestSendPTPCommand(command, outData: outData) { payload, response, error in
-            if let error = error as NSError? {
-                let hint = error.code == -21249 ? " (PTPNotAuthorizedToSendCommand)" : ""
-                done(nil, nil, "\(error.localizedDescription)\(hint)")
-            } else {
-                done(response, payload, nil)
+        guard acceptsPTP(camera) else {
+            done(nil, nil, "This camera is not advertising that it accepts PTP commands.")
+            return
+        }
+
+        /*
+         * Everything about one command, said out loud.
+         *
+         * Three guesses at the silence have now been wrong, so this stops
+         * guessing: the opcode goes out with a label, and either a completion
+         * arrives and says what it carried, or nothing does and the absence is
+         * the finding. Both halves end up on screen.
+         */
+        let opcode = command.count >= 8
+            ? UInt16(command[6]) | (UInt16(command[7]) << 8)
+            : 0
+        let label = String(format: "0x%04x", opcode)
+        onStatus?("→ \(label), \(command.count) bytes\(outData.map { ", \($0.count) bytes out" } ?? "")")
+
+        whenReady { [weak self] in
+            camera.requestSendPTPCommand(command, outData: outData) { payload, response, error in
+                if let error = error as NSError? {
+                    let hint = error.code == -21249 ? " (PTPNotAuthorizedToSendCommand)" : ""
+                    self?.onStatus?("← \(label) failed: \(error.localizedDescription)\(hint)")
+                    done(nil, nil, "\(error.localizedDescription)\(hint)")
+                } else {
+                    self?.onStatus?("← \(label): \(response?.count ?? 0) byte response, \(payload?.count ?? 0) byte payload")
+                    done(response, payload, nil)
+                }
             }
         }
     }
@@ -129,7 +159,37 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
         guard let found = device as? ICCameraDevice else { return }
         camera = found
         found.delegate = self
-        onStatus?("Found \(found.name ?? "a camera").")
+        ready = false
+        onStatus?("Found \(found.name ?? "a camera") over \(found.transportType ?? "an unknown transport").")
+        onStatus?("Capabilities: \(found.capabilities.map { "\($0)" }.joined(separator: ", "))")
+        if !acceptsPTP(found) {
+            onStatus?("This camera is NOT advertising that it accepts PTP commands. Nothing below will work.")
+        }
+    }
+
+    private func acceptsPTP(_ camera: ICCameraDevice) -> Bool {
+        camera.capabilities.contains { "\($0)".contains("PTP") }
+    }
+
+    /// Run `work` once the device says it is ready, or after a short wait.
+    private func whenReady(_ work: @escaping () -> Void) {
+        if ready { work(); return }
+        waitingForReady.append(work)
+        guard waitingForReady.count == 1 else { return }
+        onStatus?("Waiting for the device to report ready…")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+            guard let self, !self.ready, !self.waitingForReady.isEmpty else { return }
+            /* Never fired. Send anyway — that is where we were before, and it
+             * is better than waiting forever with nothing on screen. */
+            self.onStatus?("It never reported ready. Sending anyway after 5s.")
+            self.drainReady()
+        }
+    }
+
+    private func drainReady() {
+        let work = waitingForReady
+        waitingForReady = []
+        for item in work { item() }
     }
 
     func deviceBrowser(_ browser: ICDeviceBrowser, didRemove device: ICDevice, moreGoing: Bool) {
@@ -138,6 +198,7 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
 
     func device(_ device: ICDevice, didOpenSessionWithError error: (any Error)?) {
         sessionOpen = error == nil
+        onStatus?(error == nil ? "Session open." : "Session refused: \(error!.localizedDescription)")
         waitingForSession?(error == nil, error?.localizedDescription)
         waitingForSession = nil
     }
@@ -158,8 +219,17 @@ final class CameraBridge: NSObject, ICDeviceBrowserDelegate, ICCameraDeviceDeleg
                       for item: ICCameraItem, error: (any Error)?) {}
     func cameraDeviceDidEnableAccessRestriction(_ device: ICDevice) {}
     func cameraDeviceDidRemoveAccessRestriction(_ device: ICDevice) {}
-    func deviceDidBecomeReady(_ device: ICDevice) {}
-    func deviceDidBecomeReady(withCompleteContentCatalog device: ICCameraDevice) {}
+    func deviceDidBecomeReady(_ device: ICDevice) {
+        ready = true
+        onStatus?("Device reports ready.")
+        drainReady()
+    }
+
+    func deviceDidBecomeReady(withCompleteContentCatalog device: ICCameraDevice) {
+        ready = true
+        onStatus?("Card finished indexing.")
+        drainReady()
+    }
     func device(_ device: ICDevice, didCloseSessionWithError error: (any Error)?) {
         sessionOpen = false
         closing = false
@@ -175,6 +245,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     private let bridge = CameraBridge()
     private var address = ""
     private var waitingForServer = false
+    static let build = ProcessInfo.processInfo.environment["TETHER_BUILD"] ?? "unstamped"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let controller = WKUserContentController()
@@ -202,7 +273,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         bridge.onEvent = { [weak self] base64 in
             self?.call("window.__ptpEvent && window.__ptpEvent('\(base64)')")
         }
-        bridge.onStatus = { text in FileHandle.standardError.write(Data("\(text)\n".utf8)) }
+        bridge.onStatus = { [weak self] text in
+            FileHandle.standardError.write(Data("\(text)\n".utf8))
+            /* The terminal is not where the person is looking. */
+            let escaped = text.replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "'", with: "\\'")
+                .replacingOccurrences(of: "\n", with: " ")
+            self?.call("window.__ptpStatus && window.__ptpStatus('\(escaped)')")
+        }
         bridge.start()
 
         /*
@@ -213,8 +291,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
          */
         address = ProcessInfo.processInfo.environment["TETHER_URL"] ?? "https://tether.halfstop.app"
         let local = address.contains("localhost") || address.contains("127.0.0.1")
-        window.title = local ? "Halfstop Tether — local" : "Halfstop Tether — deployed"
-        FileHandle.standardError.write(Data("Loading \(address)\n".utf8))
+        /*
+         * Which build is this. Rounds have now been spent on a fault that may
+         * or may not have been in the binary being run, and neither of us
+         * could tell from anything on screen. The launcher stamps it;
+         * "unstamped" means it was started some other way.
+         */
+        window.title = "Halfstop Tether — \(local ? "local" : "deployed") · \(Self.build)"
+        FileHandle.standardError.write(Data("App build \(Self.build)\nLoading \(address)\n".utf8))
         if !local {
             let hint = "This is the deployed site, not your working copy. For local changes:\n"
                 + "  npm run web\n"
@@ -327,6 +411,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             reply(id, [:])
         case "reload":
             load()
+        case "hello":
+            /* The page announcing itself. Answer down the status channel too,
+             * so the build lands in the log the person can actually see. */
+            bridge.onStatus?("App build \(Self.build)")
+            reply(id, ["build": Self.build])
         case "transact":
             guard let commandText = body["command"] as? String,
                   let command = Data(base64Encoded: commandText) else {

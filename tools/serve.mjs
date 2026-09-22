@@ -22,6 +22,21 @@ const TYPES = {
 
 createServer(async (req, res) => {
   const path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  /*
+   * The deploy writes this file into dist; here there is no deploy, so answer
+   * with what the working copy is. Same URL either way, which is the point —
+   * the page asks one question and gets a true answer in both places.
+   */
+  if (path === '/deployed.txt') {
+    const { execSync } = await import('node:child_process');
+    let stamp = 'unknown';
+    try {
+      stamp = execSync('git describe --always --dirty --tags', { cwd: REPO }).toString().trim();
+    } catch { /* not a checkout */ }
+    res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(`${stamp} (working copy)\n${new Date().toISOString()}\n`);
+    return;
+  }
   const clean = normalize(path === '/' ? '/index.html' : path);
   /* /src/... is served from the repository, exactly where the build copies it. */
   const file = clean.startsWith('/src/') ? join(REPO, clean) : join(ROOT, clean);
