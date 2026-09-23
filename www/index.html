@@ -59,14 +59,22 @@
   .raw td.num { color: var(--ink); font-variant-numeric: tabular-nums; }
   .raw tr.gone td { color: var(--ink-3); }
 
-  #choices { display: flex; flex-direction: column; gap: 7px; }
+  #choices { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
   .choice {
-    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
     background: var(--surface); border: 1px solid var(--line-strong); color: var(--ink);
-    min-height: 58px; padding: 10px 14px; text-align: left; font-weight: 400;
+    min-height: 118px; padding: 14px 13px 13px; text-align: left; font-weight: 400;
+    border-radius: 12px; transition: border-color .12s, background .12s;
   }
-  .choice-title { font-size: 14.5px; font-weight: 600; }
-  .choice-says { font-size: 11.5px; color: var(--ink-3); }
+  .choice .ico { width: 26px; height: 26px; color: var(--clay); margin-bottom: 7px; }
+  .choice-title { font-family: var(--serif); font-size: 16px; font-weight: 600; line-height: 1.15; }
+  .choice-says { font-size: 11px; line-height: 1.35; color: var(--ink-3); }
+  .choice:not(:disabled):hover { border-color: var(--line-bright); background: var(--raised); }
+  .choice:disabled { opacity: 1; }
+  .choice:disabled .ico { color: var(--line-bright); }
+  .choice:disabled .choice-title { color: var(--ink-3); }
+  /* Narrow phones: one column reads better than two cramped ones. */
+  @media (max-width: 380px) { #choices { grid-template-columns: 1fr; } .choice { min-height: 0; } }
 
   /* The two readouts. Current on top, ideal under it, one column per axis. */
   .grid {

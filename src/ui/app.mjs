@@ -17,6 +17,7 @@ import { readCameraState, toPlannerContext, lensFrom, describeLens } from '../ca
 import { profile, NIKON_Z5 } from '../photo/bodies.mjs';
 import { formatShutter } from '../photo/units.mjs';
 import { planFor } from '../plan/index.mjs';
+import { iconFor } from './icons.mjs';
 
 /** The catalogue, in the order the design settled on: overlapping pairs adjacent. */
 export const CHOICES = [
@@ -249,8 +250,15 @@ function renderRaw(state) {
 }
 
 export function renderChoices(onPick) {
+  /*
+   * Cards, because this screen is used in the dark with cold hands and the
+   * drawing is readable before the words are. The unbuilt ones stay visible
+   * rather than hidden: knowing the shape of what is coming is worth more
+   * than a tidier grid, and a disabled card says so honestly.
+   */
   el('choices').innerHTML = CHOICES.map((c) => `
     <button class="choice" data-id="${c.id}" ${c.built ? '' : 'disabled'}>
+      ${iconFor(c.id)}
       <span class="choice-title">${c.title}</span>
       <span class="choice-says">${c.built ? c.says : 'not built yet'}</span>
     </button>`).join('');
