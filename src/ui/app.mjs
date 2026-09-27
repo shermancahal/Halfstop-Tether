@@ -16,6 +16,7 @@ import { PtpSession } from '../ptp/session.mjs';
 import { readCameraState, toPlannerContext, lensFrom, describeLens } from '../camera/live.mjs';
 import { applyPlan, confirm } from '../camera/apply.mjs';
 import { runSequence } from '../camera/capture.mjs';
+import { fixtureSession } from '../camera/fixture-session.mjs';
 import { profile, NIKON_Z5 } from '../photo/bodies.mjs';
 import { formatShutter } from '../photo/units.mjs';
 import { planFor } from '../plan/index.mjs';
@@ -24,12 +25,12 @@ import { iconFor } from './icons.mjs';
 /** The catalogue, in the order the design settled on: overlapping pairs adjacent. */
 export const CHOICES = [
   { id: 'waterfall', title: 'Waterfalls', says: 'Moving water, and the filter it needs', built: true },
-  { id: 'long-exposure', title: 'Long exposure', says: 'Anything else that wants a slow shutter' },
+  { id: 'long-exposure', title: 'Long exposure', says: 'Clouds, traffic, sea — and the filter it needs', built: true },
   { id: 'milky-way', title: 'Milky Way', says: 'The core, and whether tonight is the night', built: true },
-  { id: 'astro', title: 'Astro', says: 'Star trails, aurora, anything else up there' },
-  { id: 'golden-hour', title: 'Sunrise & sunset', says: 'Golden hour, and where the light will fall' },
+  { id: 'astro', title: 'Astro', says: 'Star trails, aurora, meteors', built: true },
+  { id: 'golden-hour', title: 'Sunrise & sunset', says: 'Golden hour, blue hour, and when to be there', built: true },
   { id: 'timelapse', title: 'Timelapse', says: 'Many frames, assembled into a clip', built: true },
-  { id: 'intervalometer', title: 'Intervalometer', says: 'Frames on a timer, kept as frames' },
+  { id: 'intervalometer', title: 'Intervalometer', says: 'Frames on a timer, kept as frames', built: true },
 ];
 
 /** How often to ask the camera what it is set to now. */
@@ -80,6 +81,30 @@ export class App {
   status(text, bad = false) {
     el('status').textContent = text;
     el('status').classList.toggle('bad', bad);
+  }
+
+  /**
+   * Connect to the fixture instead of a camera.
+   *
+   * The same PtpSession surface, so everything above it runs unchanged — which
+   * is the point. A demo that took a different path through the app would only
+   * prove that the different path works.
+   */
+  async connectDemo() {
+    await this.disconnect();
+    this.status('Loading a real Z 5, as captured by the probe…');
+    const fixture = await fetch('./fixtures/nikon-z5.json', { cache: 'no-store' }).then((r) => r.json());
+    this.session = fixtureSession(fixture);
+    this.info = await this.session.open();
+    await this.refresh();
+    return this.info;
+  }
+
+  /** In demo mode only: turn the dial that a real body would not let us turn. */
+  async setMode(mode) {
+    if (!this.session?.fixture) throw new Error('Only the demo camera has a dial we can turn.');
+    this.session.setMode(mode);
+    await this.refresh();
   }
 
   async connect() {
@@ -254,6 +279,24 @@ export function renderCamera(app, info) {
   el('cameraNotes').innerHTML = notes.map((n) => `<li>${n}</li>`).join('');
   el('cameraNotes').hidden = !notes.length;
   renderRaw(app.state);
+  renderDial(app);
+}
+
+/*
+ * The dial, but only on the camera that has no dial.
+ *
+ * On a real body this is a physical control and the app has no business
+ * offering it — the probe found ExposureProgramMode read-only, which is the
+ * finding the whole mode check rests on. On the fixture there is no hand to
+ * turn anything, so the demo lends you one.
+ */
+function renderDial(app) {
+  const demo = app.session?.fixture;
+  el('dial').hidden = !demo;
+  if (!demo) return;
+  el('dial').innerHTML = `<span class="opt-label">Mode dial</span><div class="opt-choices">${
+    app.session.modes.map((m) => `<button class="opt-choice ${m === app.camera.mode ? 'on' : ''}" data-mode="${m}"
+      title="${MODE_NAMES[m] ?? m}">${m}</button>`).join('')}</div>`;
 }
 
 /*

@@ -8,8 +8,14 @@
 import { milkyWay } from './intents/milkyway.mjs';
 import { waterfall } from './intents/waterfall.mjs';
 import { timelapse } from './intents/timelapse.mjs';
+import { longExposure } from './intents/long-exposure.mjs';
+import { astro } from './intents/astro.mjs';
+import { intervalometer } from './intents/intervalometer.mjs';
+import { goldenHour } from './intents/golden-hour.mjs';
 
-export const INTENTS = { [milkyWay.id]: milkyWay, [waterfall.id]: waterfall, [timelapse.id]: timelapse };
+export const INTENTS = Object.fromEntries(
+  [milkyWay, waterfall, timelapse, longExposure, astro, intervalometer, goldenHour].map((i) => [i.id, i]),
+);
 
 export function listIntents() {
   return Object.values(INTENTS).map(({ id, title }) => ({ id, title }));

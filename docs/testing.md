@@ -40,6 +40,24 @@ npm run android:add      # once per machine
 npm run android          # sync, then open Android Studio
 ```
 
+## Without a camera at all
+
+The connect screen has **Try it without a camera**. It loads
+`fixtures/nikon-z5.json` — a real Z 5 captured by the probe — and stands it up
+behind the same `PtpSession` surface a real body sits behind, so every layer
+above it runs unchanged. Plans, applying settings, even running a sequence all
+take the path they take over USB.
+
+It also lends you the one control a real body will not: the mode dial. The
+probe found `ExposureProgramMode` read-only on this camera, which is the
+finding the whole mirroring design rests on, so in the demo there is a dial on
+screen instead. Turning it to S and watching the Milky Way plan grow a "the
+camera sets aperture itself" check is the thesis in one gesture.
+
+What it cannot do is surprise you, and surprising you is most of what a real
+camera does. It is a way to work on the app without one, not a substitute for
+testing against one.
+
 ## Without a device
 
 ```bash

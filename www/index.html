@@ -161,6 +161,9 @@
 
   <section id="connectScreen">
     <button id="connect">Connect a camera</button>
+    <div class="stack" style="margin-top:9px">
+      <button id="demo" class="ghost">Try it without a camera</button>
+    </div>
     <p class="sub" style="margin-top:14px">Chrome or Edge over USB — Safari has no WebUSB. Nothing leaves this page.</p>
   </section>
 
@@ -170,6 +173,7 @@
       <div class="camera-now" id="cameraNow"></div>
       <div class="camera-lens" id="cameraLens"></div>
       <ul id="cameraNotes" hidden></ul>
+      <div id="dial" class="opt" hidden></div>
       <details class="raw"><summary>What the camera actually said</summary>
         <div id="cameraRawBody"></div>
       </details>
@@ -290,6 +294,33 @@ function redraw(error) {
   }
 }
 
+el('demo').onclick = async () => {
+  el('demo').disabled = true;
+  try {
+    const info = await app.connectDemo();
+    renderCamera(app, info);
+    renderChoices(pick);
+    screen('cameraScreen');
+    app.status('A real Z 5, as the probe found it. Every legal value and every writable flag is measured; '
+      + 'nothing here is invented. Turn the mode dial above and watch the plans change.');
+    wireDial();
+  } catch (error) {
+    app.status(error.message, true);
+  }
+  el('demo').disabled = false;
+};
+
+/* The demo dial is redrawn on every render, so its handlers are too. */
+function wireDial() {
+  for (const button of document.querySelectorAll('#dial .opt-choice')) {
+    button.onclick = async () => {
+      await app.setMode(button.dataset.mode);
+      redraw(null);
+      wireDial();
+    };
+  }
+}
+
 el('connect').onclick = async () => {
   el('connect').disabled = true;
   try {
@@ -314,6 +345,7 @@ function pick(intentId) {
     wants[intentId] ??= {};
     renderPlan(app.plan(intentId, wants[intentId]), app.camera, (option, choice) => {
       wants[intentId][option] = choice;
+      if (option === 'where' && choice === 'here') locate(intentId);
       pick(intentId);
     });
     showing = intentId;
@@ -376,6 +408,32 @@ el('shoot').onclick = async () => {
 };
 
 el('stop').onclick = () => { app.stop(); app.status('Stopping after this frame…'); };
+
+/*
+ * Where you are, for the one intent that needs it. Asked for only when the
+ * button is pressed — a plan screen that demands a location before it will
+ * say anything is a plan screen nobody opens twice.
+ */
+function locate(intentId) {
+  if (!navigator.geolocation) {
+    app.status('This browser will not give out a location. The settings below still hold; the times do not.', true);
+    return;
+  }
+  app.status('Asking for your location…');
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => {
+      Object.assign(wants[intentId], { latitude: coords.latitude, longitude: coords.longitude });
+      app.status('');
+      pick(intentId);
+    },
+    (error) => {
+      wants[intentId].where = '';
+      app.status(`No location: ${error.message}. The settings below still hold; the times do not.`, true);
+      pick(intentId);
+    },
+    { timeout: 10000, maximumAge: 600000 },
+  );
+}
 
 el('back').onclick = () => screen('cameraScreen');
 el('disconnect').onclick = async () => {

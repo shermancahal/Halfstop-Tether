@@ -39,8 +39,12 @@ createServer(async (req, res) => {
   }
   const clean = normalize(path === '/' ? '/index.html' : path);
   /* /src/... is served from the repository, exactly where the build copies it. */
-  const file = clean.startsWith('/src/') ? join(REPO, clean) : join(ROOT, clean);
-  if (!file.startsWith(ROOT) && !file.startsWith(join(REPO, 'src'))) { res.writeHead(403).end('no'); return; }
+  /* /src/ and /fixtures/ come from the repository, at the same URLs the build
+   * publishes them under — so a path is identical here and deployed. */
+  const lent = ['/src/', '/fixtures/'].find((prefix) => clean.startsWith(prefix));
+  const file = lent ? join(REPO, clean) : join(ROOT, clean);
+  const allowed = [ROOT, join(REPO, 'src'), join(REPO, 'fixtures')];
+  if (!allowed.some((dir) => file.startsWith(dir))) { res.writeHead(403).end('no'); return; }
   try {
     const body = await readFile(file);
     res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' }).end(body);

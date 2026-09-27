@@ -74,4 +74,29 @@ export function waterShutter({ look = 'silk', flow = 'average' }) {
   return { low: low * scale, high: high * scale, says: WATER_LOOKS[look].says };
 }
 
+/*
+ * How long other moving things take to blur.
+ *
+ * Empirical, unlike everything else in this file, and marked as such: these
+ * are the windows photographers actually land on, not a result derived from a
+ * subject's speed. Where a real speed is known, subjectMotionLimit above is
+ * the honest calculation and this is not needed.
+ */
+export const BLUR_LOOKS = {
+  clouds: { seconds: [30, 240], says: 'cloud edges stretch into streaks' },
+  traffic: { seconds: [8, 25], says: 'headlights draw unbroken lines' },
+  sea: { seconds: [2, 8], says: 'swell flattens to mist without losing the horizon' },
+  crowds: { seconds: [10, 30], says: 'anyone walking disappears; anyone standing stays' },
+  stars: { seconds: [120, 900], says: 'stars pull into visible arcs' },
+};
+
+export function blurShutter({ subject = 'clouds', pace = 'average' }) {
+  const look = BLUR_LOOKS[subject];
+  if (!look) throw new Error(`No blur window for ${subject}. Known: ${Object.keys(BLUR_LOOKS).join(', ')}`);
+  const [low, high] = look.seconds;
+  /* Fast weather or fast traffic reaches the same look sooner. */
+  const scale = { fast: 0.5, average: 1, slow: 2 }[pace] ?? 1;
+  return { low: low * scale, high: high * scale, says: look.says };
+}
+
 export { ARCSEC_PER_SECOND };

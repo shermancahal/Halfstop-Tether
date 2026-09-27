@@ -19,6 +19,8 @@ await rm(DIST, { recursive: true, force: true });
 await mkdir(DIST, { recursive: true });
 await cp(join(REPO, 'www'), DIST, { recursive: true });
 await cp(join(REPO, 'src'), join(DIST, 'src'), { recursive: true });
+/* The demo camera is a real probe capture, so it ships with the site. */
+await cp(join(REPO, 'fixtures'), join(DIST, 'fixtures'), { recursive: true });
 
 /* GitHub Pages reads this to serve the custom domain. */
 await writeFile(join(DIST, 'CNAME'), `${DOMAIN}\n`);

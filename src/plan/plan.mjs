@@ -69,11 +69,26 @@ export function modeCheck({ plan, camera, pins }) {
 }
 
 /** Fold a solver's own compromises into the plan, so nothing is silently absorbed. */
+/*
+ * When a snap is worth mentioning.
+ *
+ * `snap` takes the nearest legal value, so the error it reports is at most
+ * half the gap between neighbours — on a camera with one-stop ISO steps that
+ * is half a stop, every time, unavoidably. Warning at a third of a stop meant
+ * warning on almost every plan, which crowded out the notes that were telling
+ * you something: a trail length, a filter, a shutter the body cannot reach.
+ *
+ * Above 0.6 stops the value did not merely round, it fell off the end of what
+ * the camera offers — a tracker asking for 240 seconds from a dial that stops
+ * at 30 moves three stops, and that is worth a sentence.
+ */
+const SNAP_WORTH_SAYING = 0.6;
+
 export function foldExposureNotes(plan, solved) {
   for (const note of solved.notes) {
     if (note.kind === 'clamped') {
       plan.warn(`${note.says} — the exposure is ${Math.abs(solved.errorStops).toFixed(1)} stops short of balanced.`);
-    } else if (note.kind === 'snapped' && Math.abs(note.offBy) > 0.34) {
+    } else if (note.kind === 'snapped' && Math.abs(note.offBy) > SNAP_WORTH_SAYING) {
       plan.warn(`${note.says}.`);
     }
   }

@@ -38,7 +38,26 @@ test('a value cannot be set without one', () => {
 
 test('the catalogue lists what it can solve', () => {
   const ids = listIntents().map((i) => i.id);
-  assert.deepEqual(ids.sort(), ['milky-way', 'timelapse', 'waterfall']);
+  assert.deepEqual(ids.sort(),
+    ['astro', 'golden-hour', 'intervalometer', 'long-exposure', 'milky-way', 'timelapse', 'waterfall']);
+});
+
+test('the cards and the catalogue agree about what is built', async () => {
+  /*
+   * A card marked built for an intent that does not exist throws when tapped;
+   * an intent with no card cannot be reached at all. Both are one-word edits
+   * in separate files, which is exactly the pair that drifts.
+   */
+  const { CHOICES } = await import('../src/ui/app.mjs');
+  const solvable = new Set(listIntents().map((i) => i.id));
+
+  for (const choice of CHOICES) {
+    assert.equal(solvable.has(choice.id), Boolean(choice.built),
+      `${choice.id}: card says ${choice.built ? 'built' : 'not built'}, catalogue says otherwise`);
+  }
+  for (const id of solvable) {
+    assert.ok(CHOICES.some((c) => c.id === id), `${id} can be solved but has no card`);
+  }
 });
 
 test('an unknown intent fails loudly and says what it knows', () => {
