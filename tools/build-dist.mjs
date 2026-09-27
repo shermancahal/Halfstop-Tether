@@ -78,6 +78,16 @@ for (const page of pages) {
   for (const spec of specsIn(html)) await follow(spec, DIST, page);
 }
 const imports = [...seen];
+/*
+ * The demo camera is fetched at runtime, not imported, so the import walk
+ * above cannot see it. Nothing else would notice it going missing until
+ * someone pressed the button and got nothing.
+ */
+for (const runtime of ['fixtures/nikon-z5.json']) {
+  try { JSON.parse(await readFile(join(DIST, runtime), 'utf8')); }
+  catch (error) { missing.push(`${runtime} is not in dist, or is not valid JSON (${error.message})`); }
+}
+
 if (missing.length) {
   console.error('dist would not load in a browser:');
   for (const m of missing) console.error(`  - ${m}`);

@@ -104,6 +104,16 @@ jobs:
             exit 1
           fi
 
+      - name: The demo camera is actually served
+        run: |
+          # Fetched at runtime rather than imported, so the module check below
+          # cannot see it. A missing fixture is a dead button on the live site.
+          if ! curl -fsSL --max-time 20 https://tether.halfstop.app/fixtures/nikon-z5.json | head -c 200 | grep -q fixtureVersion; then
+            echo "::error::fixtures/nikon-z5.json is not being served. Try it without a camera would do nothing."
+            exit 1
+          fi
+          echo "demo fixture served"
+
       - name: The modules the page needs are actually served
         run: |
           for path in src/ptp/codec.mjs src/ptp/session.mjs src/ptp/webusb.mjs; do
