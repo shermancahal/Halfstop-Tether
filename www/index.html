@@ -149,6 +149,9 @@
   #planReady { font-size: 13px; color: var(--pine); margin: 16px 0 0; }
   #planReady.blocked { color: var(--warn); }
   .stack { display: flex; flex-direction: column; gap: 9px; margin-top: 22px; }
+  button.danger { border-color: #7a4436; color: var(--clay); }
+  #runBar { height: 4px; background: var(--line); border-radius: 3px; margin-top: 14px; overflow: hidden; }
+  #runFill { height: 100%; width: 0; background: var(--clay); transition: width .25s linear; }
 </style>
 
 <main>
@@ -187,7 +190,13 @@
     <h2 id="planChecksHead" hidden>Before you start</h2>
     <div id="planChecks"></div>
     <p id="planReady"></p>
-    <div class="stack"><button id="back" class="ghost">Something else</button></div>
+    <div class="stack">
+      <button id="apply">Set these on the camera</button>
+      <button id="shoot" class="ghost" hidden></button>
+      <button id="stop" class="ghost danger" hidden>Stop</button>
+      <button id="back" class="ghost">Something else</button>
+    </div>
+    <div id="runBar" hidden><div id="runFill"></div></div>
   </section>
 
   <p id="status"></p>
@@ -201,6 +210,7 @@
 
 <script type="module">
 import { App, renderCamera, renderChoices, renderPlan, show, el } from './src/ui/app.mjs';
+import { describeApply } from './src/camera/apply.mjs';
 import { describeConnectionFailure, transportKind } from './src/ptp/connect.mjs';
 import { usbDiagnostics } from './src/ptp/webusb.mjs';
 import { bridgeLog, installBridgeLog, subscribeBridgeLog } from './src/ptp/bridge-log.mjs';
@@ -313,6 +323,59 @@ function pick(intentId) {
     app.status(error.message, true);
   }
 }
+
+/*
+ * Setting and shooting. Both write to the camera and neither happens without
+ * a press — the second one fills a card, so it says how many frames and how
+ * long before you touch it.
+ */
+const busy = (on) => {
+  for (const id of ['apply', 'shoot', 'back']) el(id).disabled = on;
+  el('stop').hidden = !on;
+};
+
+el('apply').onclick = async () => {
+  busy(true);
+  try {
+    const rows = await app.apply(app.plan(showing, wants[showing] ?? {}));
+    redraw(null);
+    app.status(describeApply(rows), rows.some((r) => !['set', 'already'].includes(r.outcome)));
+  } catch (error) {
+    app.status(error.message, true);
+  }
+  /* busy(false) re-enables; renderPlan decides whether Apply should be. */
+  busy(false);
+  redraw(null);
+};
+
+el('shoot').onclick = async () => {
+  const plan = app.plan(showing, wants[showing] ?? {});
+  busy(true);
+  el('runBar').hidden = false;
+  try {
+    const run = await app.capture(plan, {
+      onProgress: ({ frame, frames, phase, elapsedS }) => {
+        el('runFill').style.width = `${Math.round((frame / frames) * 100)}%`;
+        app.status(`Frame ${frame} of ${frames} — ${phase === 'firing' ? 'exposing' : 'done'}, ${Math.round(elapsedS)}s in.`);
+      },
+    });
+    app.status(`${run.taken} of ${run.asked} frames in ${Math.round(run.elapsedS)}s`
+      + (run.stoppedEarly ? ', stopped early.' : '.')
+      + (run.overran ? ` ${run.overran} frame${run.overran > 1 ? 's' : ''} took longer than the interval allowed.` : ''),
+      run.stoppedEarly || run.overran > 0);
+  } catch (error) {
+    app.status(error.message, true);
+  }
+  el('runBar').hidden = true;
+  el('runFill').style.width = '0';
+  busy(false);
+  /* The camera moved while we were not looking. */
+  await app.refresh().catch(() => {});
+  app.watch(redraw);
+  redraw(null);
+};
+
+el('stop').onclick = () => { app.stop(); app.status('Stopping after this frame…'); };
 
 el('back').onclick = () => screen('cameraScreen');
 el('disconnect').onclick = async () => {

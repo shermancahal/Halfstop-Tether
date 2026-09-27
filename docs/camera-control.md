@@ -294,3 +294,43 @@ it reaches a design.
 3. **`PTPNotAuthorizedToSendCommand`, error −21249** — whether iOS will pass
    these same commands through `ImageCaptureCore`. The one unknown that could
    still reshape the iOS half, and the desktop probe cannot answer it.
+
+## Writing, and firing
+
+Reading was the hard half; writing is short but has two rules that are not
+obvious.
+
+**Ask the descriptor, not the plan.** The mode dial can move between a plan
+being drawn and a button being pressed, so writability is checked again
+immediately before the write. One is a statement about a screen, the other
+about something that is about to happen.
+
+**A write that returns OK is not a write that landed.** Cameras accept
+SetDevicePropValue, answer 0x2001, and sit exactly where they were. Every
+applied axis is re-read afterwards and compared; anything more than a sixth of
+a stop away is reported as drifted rather than claimed as set.
+
+Firing has one of its own. Which capture operation a body honours is not
+settled by its operation list — bodies advertise the standard InitiateCapture
+and record nothing — so the first frame tries the standard one, falls back to
+the vendor one, and every frame after it uses whatever worked.
+
+For spacing, the interval runs from the **start** of one frame to the start of
+the next. Measured end-to-start instead, a timelapse speeds up as the light
+fails and the exposures shorten. When a frame cannot fit its slot the next one
+starts immediately and the run reports how many overran, because a five-minute
+sequence quietly taking twelve is worse than one that says so.
+
+Waiting for the body beats computing the wait: NikonDeviceReady answers Device
+Busy until the file is written, and bulb, long-exposure noise reduction and a
+slow card all extend that by amounts nothing here can see. Bodies without it
+get the exposure plus a settle time, which is a guess and is named as one.
+
+## One transaction at a time
+
+PTP has a single conversation and no way to tell two of them apart. Nothing ran
+concurrently until the camera was re-read on a timer while a person could press
+a button; then two transactions overlap. On a command transport that is a race
+for the reply, and on a byte transport it is one stream carrying half of each.
+`PtpSession.transaction` queues them, and the queue survives a refusal — one
+rejected command must not wedge the camera.

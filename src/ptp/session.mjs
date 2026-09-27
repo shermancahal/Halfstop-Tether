@@ -29,6 +29,26 @@ export class PtpSession {
     this.transactionId = 0;
     this.sessionOpen = false;
     this.deviceInfo = null;
+    this.#queue = Promise.resolve();
+  }
+
+  /*
+   * One transaction at a time, in the order asked for.
+   *
+   * PTP has a single conversation and no way to tell two of them apart. Until
+   * now nothing ran concurrently so nothing collided; the moment the camera is
+   * re-read on a timer while a person can press a button, two transactions
+   * overlap. On a command transport that is a race for the reply; on a byte
+   * transport it is one stream carrying half of each, and the second reader
+   * gets the first one's response container. Queue them.
+   */
+  #queue;
+
+  transaction(request) {
+    const result = this.#queue.then(() => this.#run(request));
+    /* The chain has to survive a failure, or one refusal wedges the camera. */
+    this.#queue = result.catch(() => {});
+    return result;
   }
 
   #nextId() {
@@ -41,7 +61,7 @@ export class PtpSession {
    * One transaction: command out, optional data either way, response back.
    * Everything the app does to a camera goes through here.
    */
-  async transaction({ opcode, params = [], dataOut = null, expectData = false, timeoutMs = null }) {
+  async #run({ opcode, params = [], dataOut = null, expectData = false, timeoutMs = null }) {
     /*
      * The boundary docs/transport.md drew, now load-bearing. Android and
      * WebUSB hand over bytes and we frame them; ImageCaptureCore takes a

@@ -14,6 +14,8 @@
 import { connectTransport, transportKind } from '../ptp/connect.mjs';
 import { PtpSession } from '../ptp/session.mjs';
 import { readCameraState, toPlannerContext, lensFrom, describeLens } from '../camera/live.mjs';
+import { applyPlan, confirm } from '../camera/apply.mjs';
+import { runSequence } from '../camera/capture.mjs';
 import { profile, NIKON_Z5 } from '../photo/bodies.mjs';
 import { formatShutter } from '../photo/units.mjs';
 import { planFor } from '../plan/index.mjs';
@@ -178,6 +180,46 @@ export class App {
     try { await this.transport?.close(); } catch { /* going away anyway */ }
     this.session = this.transport = this.state = this.camera = this.info = null;
   }
+
+  /**
+   * Set the plan on the camera, then look to see whether it landed.
+   *
+   * The looking is not ceremony. A camera can accept SetDevicePropValue,
+   * answer OK, and sit exactly where it was — so the state is re-read and the
+   * rows are confirmed against it before anything is claimed.
+   */
+  async apply(plan) {
+    const rows = await applyPlan({ session: this.session, state: this.state, plan });
+    await this.refresh();
+    return confirm(rows, this.state);
+  }
+
+  /**
+   * Run the plan's sequence.
+   *
+   * The poll stands aside for the duration. It is safe not to — transactions
+   * are queued — but a camera mid-exposure answers Device Busy, and filling
+   * the log with refusals while it works is not information.
+   */
+  async capture(plan, { onProgress } = {}) {
+    if (!plan.sequence) throw new Error('This plan has no sequence to run.');
+    this.unwatch();
+    this.stopRequested = false;
+    try {
+      return await runSequence({
+        session: this.session,
+        frames: plan.sequence.frames,
+        intervalS: plan.sequence.intervalS,
+        exposureS: plan.settings.shutter ?? 0,
+        onProgress,
+        stopped: () => this.stopRequested,
+      });
+    } finally {
+      this.stopRequested = false;
+    }
+  }
+
+  stop() { this.stopRequested = true; }
 
   plan(intentId, want = {}) {
     return planFor(intentId, { camera: this.camera, lens: this.lens, site: { bortle: 3 }, want });
@@ -373,6 +415,38 @@ export function renderPlan(plan, camera, onWant) {
     ? 'Everything here is mine to set.'
     : `Waiting on you: ${plan.blockers.length} thing${plan.blockers.length > 1 ? 's' : ''} only a hand can change.`;
   el('planReady').classList.toggle('blocked', !plan.ready);
+
+  /*
+   * What the app can do about it. Nothing here happens on its own: both
+   * buttons write to the camera, and one of them fills a card.
+   */
+  const mine = AXES.filter(({ id }) => plan.settings[id] != null
+    && camera.writableByMode?.[camera.mode]?.includes(id));
+  el('apply').disabled = !mine.length;
+  el('apply').textContent = mine.length
+    ? `Set ${listOf(mine.map((a) => spoken(a.label)))} on the camera`
+    : 'Nothing here is mine to set';
+
+  const seq = plan.sequence;
+  el('shoot').hidden = !seq;
+  if (seq) {
+    el('shoot').textContent = `Shoot ${seq.frames} frames · ${describeSpan(seq.totalS)}`;
+  }
+}
+
+/* An acronym stays an acronym: "set shutter, aperture and iso" reads as a word. */
+const spoken = (label) => (label === label.toUpperCase() ? label : label.toLowerCase());
+
+const listOf = (items) => (items.length < 2
+  ? items.join('')
+  : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`);
+
+/** A run length a person can picture, rather than a count of seconds. */
+export function describeSpan(seconds) {
+  if (seconds < 90) return `${Math.round(seconds)}s`;
+  const minutes = seconds / 60;
+  if (minutes < 90) return `${minutes < 10 ? minutes.toFixed(1) : Math.round(minutes)} min`;
+  return `${(minutes / 60).toFixed(1)} hours`;
 }
 
 export { show, el };
